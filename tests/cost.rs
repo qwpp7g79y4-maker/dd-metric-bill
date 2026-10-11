@@ -282,3 +282,27 @@ fn invalid_price_file_exits_with_2() {
     assert!(stderr.contains("cannot read price file"), "{stderr}");
     assert!(!stderr.contains(ESTIMATE), "{stderr}");
 }
+
+#[test]
+fn price_file_with_utf8_bom_is_read() {
+    let sample = manifest("tests/fixtures/b1-count.dogstatsd");
+    let price = TempFile::new(
+        "\u{feff}{\"currency\":\"TST\",\"source\":\"https://example.test/source\",\"date\":\"2026-01-02\",\"ingested_per_100\":100}",
+    );
+    let output = binary()
+        .args([
+            "count",
+            "--plan",
+            "pro",
+            "--hosts",
+            "0",
+            "--prices",
+            price.as_str(),
+            &sample,
+        ])
+        .output()
+        .expect("binary start");
+    assert_eq!(output.status.code(), Some(0), "{}", failure(&output));
+    let stdout = String::from_utf8(output.stdout).expect("stdout is utf-8");
+    assert!(stdout.contains("price: TST per 100\n"), "{stdout}");
+}

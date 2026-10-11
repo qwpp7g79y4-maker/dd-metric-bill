@@ -147,6 +147,7 @@ fn readme_has_the_sections() {
     for heading in [
         "## Why",
         "## Installation",
+        "## System requirements",
         "## Quick start",
         "## How it counts",
         "## Compared with alternatives",
@@ -189,17 +190,45 @@ fn readme_has_the_sections() {
     assert!(section(&readme_nl, "## Steunen").contains("(https://ko-fi.com/pepai)"));
     assert_eq!(read(".github/FUNDING.yml"), "ko_fi: pepai\n");
     let install = section(&readme, "## Installation");
-    let crates_io = install
-        .find("cargo install --locked dd-metric-bill")
-        .expect("crates.io install line");
+    let releases = install
+        .find("(https://github.com/qwpp7g79y4-maker/dd-metric-bill/releases)")
+        .expect("releases line");
     let from_git = install
         .find("cargo install --locked --git https://github.com/qwpp7g79y4-maker/dd-metric-bill")
         .expect("git install line");
-    assert!(crates_io < from_git, "crates.io is the first install line");
+    assert!(
+        releases < from_git,
+        "the release download is the first install option"
+    );
     assert!(install.contains("Rust 1.85 or newer"));
-    assert!(install.contains("(https://github.com/qwpp7g79y4-maker/dd-metric-bill/releases)"));
+    // Not on crates.io yet: no install line or badge that would fail.
+    assert!(!readme.contains("crates.io/crates/dd-metric-bill"));
+    assert!(!readme_nl.contains("crates.io/crates/dd-metric-bill"));
     assert!(section(&readme_nl, "## Installatie").contains("Rust 1.85 of nieuwer"));
     assert!(read("Cargo.toml").contains("rust-version = \"1.85\""));
+    let requirements = section(&readme, "## System requirements");
+    let requirements_nl = section(&readme_nl, "## Systeemvereisten");
+    let release = read(".github/workflows/release.yml");
+    for target in [
+        "x86_64-unknown-linux-gnu",
+        "x86_64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-apple-darwin",
+        "x86_64-pc-windows-msvc",
+    ] {
+        assert!(requirements.contains(target), "requirements miss {target}");
+        assert!(
+            requirements_nl.contains(target),
+            "NL requirements miss {target}"
+        );
+        assert!(
+            release.contains(&format!("target: {target}")),
+            "release.yml misses {target}"
+        );
+    }
+    assert!(requirements.contains("glibc 2.34") && release.contains("GLIBC_2.34"));
+    assert!(requirements.contains("macOS 10.12") && release.contains("macos_min: \"10.12\""));
+    assert!(requirements.contains("macOS 11") && release.contains("macos_min: \"11.0\""));
     let security = read("SECURITY.md");
     assert!(security.contains("pep_ai@icloud.com"));
     assert!(security.contains("| 0.1.x | Yes |"));
@@ -366,8 +395,6 @@ fn option_and_error_tables_match_the_binary() {
             let output = bin().args(&row.args).output().expect("start binary");
             let out = String::from_utf8(output.stdout).expect("stdout is utf-8");
             let err = String::from_utf8(output.stderr).expect("stderr is utf-8");
-            // clap names the binary after its file, which ends in `.exe` on Windows.
-            let err = err.replace("dd-metric-bill.exe", "dd-metric-bill");
             assert_eq!(
                 output.status.code(),
                 Some(3),

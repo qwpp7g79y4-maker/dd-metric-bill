@@ -125,7 +125,9 @@ enum PriceNumberError {
 /// Required: `currency`, `source`, `date`, `ingested_per_100`.
 /// `indexed_per_100` may be absent. An unknown field, an empty text field,
 /// a negative price, or a price that does not fit the calculation is invalid.
+/// A UTF-8 BOM at the start is skipped, as in samples.
 pub fn parse_prices(text: &str) -> Result<Prices, PriceError> {
+    let text = crate::parse::without_bom(text);
     let value: Value = serde_json::from_str(text).map_err(|_| PriceError::new(Reason::Json))?;
     let Value::Object(obj) = value else {
         return Err(PriceError::new(Reason::NotObject));
