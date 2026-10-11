@@ -471,11 +471,8 @@ fn rule_d5(factor: u64) -> Rule {
 }
 
 fn factor_of(metric: &MetricCount) -> u64 {
-    if metric.combinations == 0 {
-        0
-    } else {
-        metric.count / metric.combinations
-    }
+    // Zero combinations means factor 0.
+    metric.count.checked_div(metric.combinations).unwrap_or(0)
 }
 
 fn scale(metric: &str, series: u64, factor: u64) -> Result<u64, CountError> {
