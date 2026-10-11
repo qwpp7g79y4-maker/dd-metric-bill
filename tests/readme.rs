@@ -288,6 +288,7 @@ fn sources_are_quoted_verbatim() {
         "serde_json",
         "1.0.151",
         "1.0.23",
+        "David Tolnay",
         "no network, file, or process access",
         "There is no `--show-values` flag.",
         PRICE_LIMIT,
@@ -419,6 +420,10 @@ fn fixture_readme_describes_every_file_as_synthetic() {
         assert!(
             part.to_lowercase().contains("synthetic"),
             "{name} is not described as synthetic"
+        );
+        assert!(
+            part.trim().chars().count() >= 40,
+            "{name} has too short a description"
         );
     }
     assert!(count > 0);
