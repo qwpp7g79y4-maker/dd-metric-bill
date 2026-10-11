@@ -366,6 +366,8 @@ fn option_and_error_tables_match_the_binary() {
             let output = bin().args(&row.args).output().expect("start binary");
             let out = String::from_utf8(output.stdout).expect("stdout is utf-8");
             let err = String::from_utf8(output.stderr).expect("stderr is utf-8");
+            // clap names the binary after its file, which ends in `.exe` on Windows.
+            let err = err.replace("dd-metric-bill.exe", "dd-metric-bill");
             assert_eq!(
                 output.status.code(),
                 Some(3),
