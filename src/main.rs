@@ -29,6 +29,7 @@ Only count accepts --explain, --plan, --hosts, --allow-tags, --prices and --unbo
 #[derive(Parser)]
 #[command(
     name = "dd-metric-bill",
+    bin_name = "dd-metric-bill",
     version,
     about = "Estimate the number of billable Datadog custom metrics in a sample.",
     after_help = AFTER_HELP,
