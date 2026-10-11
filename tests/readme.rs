@@ -190,20 +190,29 @@ fn readme_has_the_sections() {
     assert!(section(&readme_nl, "## Steunen").contains("(https://ko-fi.com/pepai)"));
     assert_eq!(read(".github/FUNDING.yml"), "ko_fi: pepai\n");
     let install = section(&readme, "## Installation");
-    let releases = install
-        .find("(https://github.com/qwpp7g79y4-maker/dd-metric-bill/releases)")
-        .expect("releases line");
-    let from_git = install
-        .find("cargo install --locked --git https://github.com/qwpp7g79y4-maker/dd-metric-bill")
-        .expect("git install line");
-    assert!(
-        releases < from_git,
-        "the release download is the first install option"
-    );
+    let install_nl = section(&readme_nl, "## Installatie");
+    for (text, part) in [(&install, "EN"), (&install_nl, "NL")] {
+        let crates_io = text
+            .find("cargo install --locked dd-metric-bill")
+            .expect("crates.io install line");
+        let releases = text
+            .find("(https://github.com/qwpp7g79y4-maker/dd-metric-bill/releases)")
+            .expect("releases line");
+        let from_git = text
+            .find("cargo install --locked --git https://github.com/qwpp7g79y4-maker/dd-metric-bill")
+            .expect("git install line");
+        assert!(
+            crates_io < releases && crates_io < from_git,
+            "{part}: crates.io is the first install option"
+        );
+    }
     assert!(install.contains("Rust 1.85 or newer"));
-    // Not on crates.io yet: no install line or badge that would fail.
-    assert!(!readme.contains("crates.io/crates/dd-metric-bill"));
-    assert!(!readme_nl.contains("crates.io/crates/dd-metric-bill"));
+    let badge = "[![crates.io](https://img.shields.io/crates/v/dd-metric-bill.svg)](https://crates.io/crates/dd-metric-bill)";
+    assert!(readme.contains(badge), "README misses the crates.io badge");
+    assert!(
+        readme_nl.contains(badge),
+        "README.nl.md misses the crates.io badge"
+    );
     assert!(section(&readme_nl, "## Installatie").contains("Rust 1.85 of nieuwer"));
     assert!(read("Cargo.toml").contains("rust-version = \"1.85\""));
     let requirements = section(&readme, "## System requirements");

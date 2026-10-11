@@ -4,7 +4,7 @@ English · [Nederlands](README.nl.md)
 
 Estimate how many billable Datadog custom metrics a sample produces, offline, before the bill arrives.
 
-[![CI](https://github.com/qwpp7g79y4-maker/dd-metric-bill/actions/workflows/ci.yml/badge.svg)](https://github.com/qwpp7g79y4-maker/dd-metric-bill/actions/workflows/ci.yml)
+[![crates.io](https://img.shields.io/crates/v/dd-metric-bill.svg)](https://crates.io/crates/dd-metric-bill) [![CI](https://github.com/qwpp7g79y4-maker/dd-metric-bill/actions/workflows/ci.yml/badge.svg)](https://github.com/qwpp7g79y4-maker/dd-metric-bill/actions/workflows/ci.yml)
 
 [Installation](#installation) • [Quick start](#quick-start) • [How it counts](#how-it-counts) • [Alternatives](#compared-with-alternatives) • [Limitations](#limitations) • [Reference](docs/reference.md)
 
@@ -16,14 +16,16 @@ Datadog bills custom metrics per unique combination of metric name and tag value
 
 ## Installation
 
-Ready-made binaries for Linux (x86_64, glibc and musl), Windows (x86_64) and macOS (Intel and Apple Silicon), each with a SHA-256 checksum, are on the [Releases page](https://github.com/qwpp7g79y4-maker/dd-metric-bill/releases). Unpack the archive and put `dd-metric-bill` on your `PATH`.
-
-With Rust 1.85 or newer, build and install it from source:
+With Rust 1.85 or newer, install from [crates.io](https://crates.io/crates/dd-metric-bill):
 
 ```sh
-cargo install --locked --git https://github.com/qwpp7g79y4-maker/dd-metric-bill
+cargo install --locked dd-metric-bill
 dd-metric-bill --help
 ```
+
+Ready-made binaries for Linux (x86_64, glibc and musl), Windows (x86_64) and macOS (Intel and Apple Silicon), each with a SHA-256 checksum, are on the [Releases page](https://github.com/qwpp7g79y4-maker/dd-metric-bill/releases). Unpack the archive and put `dd-metric-bill` on your `PATH`.
+
+For the latest `main`: `cargo install --locked --git https://github.com/qwpp7g79y4-maker/dd-metric-bill`.
 
 From a local clone: `cargo install --locked --path .`, or `cargo build --release`; the binary is `target/release/dd-metric-bill`.
 
