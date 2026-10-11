@@ -151,6 +151,7 @@ fn readme_has_the_sections() {
         "## How it counts",
         "## Compared with alternatives",
         "## Limitations",
+        "## Support",
         "## License",
         "## Contact",
     ] {
@@ -178,7 +179,30 @@ fn readme_has_the_sections() {
         assert!(limits.contains(part), "Limitations is missing {part}");
     }
     assert!(section(&readme, "## License").contains("PEPAI"));
-    assert!(section(&readme, "## Contact").contains("pep_ai@icloud.com"));
+    let contact = section(&readme, "## Contact");
+    assert!(contact.contains("pep_ai@icloud.com"));
+    assert!(contact.contains("(https://github.com/qwpp7g79y4-maker/dd-metric-bill/issues)"));
+    assert!(contact.contains("[SECURITY.md](SECURITY.md)"));
+    let readme_nl = read(README_NL);
+    assert!(section(&readme_nl, "## Contact").contains("[SECURITY.md](SECURITY.md)"));
+    assert!(section(&readme, "## Support").contains("(https://ko-fi.com/pepai)"));
+    assert!(section(&readme_nl, "## Steunen").contains("(https://ko-fi.com/pepai)"));
+    assert_eq!(read(".github/FUNDING.yml"), "ko_fi: pepai\n");
+    let install = section(&readme, "## Installation");
+    let crates_io = install
+        .find("cargo install --locked dd-metric-bill")
+        .expect("crates.io install line");
+    let from_git = install
+        .find("cargo install --locked --git https://github.com/qwpp7g79y4-maker/dd-metric-bill")
+        .expect("git install line");
+    assert!(crates_io < from_git, "crates.io is the first install line");
+    assert!(install.contains("Rust 1.85 or newer"));
+    assert!(install.contains("(https://github.com/qwpp7g79y4-maker/dd-metric-bill/releases)"));
+    assert!(section(&readme_nl, "## Installatie").contains("Rust 1.85 of nieuwer"));
+    assert!(read("Cargo.toml").contains("rust-version = \"1.85\""));
+    let security = read("SECURITY.md");
+    assert!(security.contains("pep_ai@icloud.com"));
+    assert!(security.contains("| 0.1.x | Yes |"));
     assert!(readme.contains("nicholas-ruest/series-budget"));
     assert!(!readme.contains("--show-values` exists"));
 }

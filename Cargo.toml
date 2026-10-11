@@ -2,9 +2,15 @@
 name = "dd-metric-bill"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.85"
 authors = ["PEPAI <pep_ai@icloud.com>"]
 license = "MIT OR Apache-2.0"
 description = "Estimate how many billable Datadog custom metrics a sample produces."
+repository = "https://github.com/qwpp7g79y4-maker/dd-metric-bill"
+readme = "README.md"
+keywords = ["datadog", "metrics", "cost", "observability", "cli"]
+categories = ["command-line-utilities", "development-tools"]
+exclude = [".github/", ".gitattributes"]
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }

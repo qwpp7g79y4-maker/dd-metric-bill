@@ -602,6 +602,8 @@ fn unknown_prometheus_type_exits_with_2() {
 
 fn json_valid(text: &str) {
     let mut child = std::process::Command::new("python3")
+        // Python on Windows reads stdin as the ANSI code page unless told otherwise.
+        .env("PYTHONIOENCODING", "utf-8")
         .args(["-m", "json.tool"])
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::null())

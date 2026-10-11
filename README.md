@@ -4,6 +4,8 @@ English · [Nederlands](README.nl.md)
 
 Estimate how many billable Datadog custom metrics a sample produces, offline, before the bill arrives.
 
+[![crates.io](https://img.shields.io/crates/v/dd-metric-bill.svg)](https://crates.io/crates/dd-metric-bill) [![CI](https://github.com/qwpp7g79y4-maker/dd-metric-bill/actions/workflows/ci.yml/badge.svg)](https://github.com/qwpp7g79y4-maker/dd-metric-bill/actions/workflows/ci.yml)
+
 [Installation](#installation) • [Quick start](#quick-start) • [How it counts](#how-it-counts) • [Alternatives](#compared-with-alternatives) • [Limitations](#limitations) • [Reference](docs/reference.md)
 
 dd-metric-bill is a command-line tool written in Rust. It reads one or more samples on your machine as DogStatsD lines (`name:value|type|#tag:value`), as JSON lines, or as Prometheus text. A custom metric is a unique combination of metric name and tag values, including the `host` tag. Tag order does not count. COUNT, RATE, and GAUGE count as 1 per combination. A histogram counts as 5 per combination by default: 4 aggregates plus 1 percentile. A distribution counts as 5 per combination, or 10 with `--percentiles`. Per tag key it shows how many unique values that key has and how many series it adds. Unbounded tags (too many values, or a pattern such as a UUID) get a reason. `--allow-tags` simulates Metrics without Limits: ingested on all tags, indexed on the allowlist. `diff` compares two samples. `--budget N` exits 1 when the total is above N. `--plan` and `--hosts` show the allotment. `--prices` reads a price file and estimates the cost above the allotment. `--json` writes the same result as JSON. The default output shows keys and counts, not the tag values. Contracts with Metric Name pricing are not supported. Only count accepts --explain, --plan, --hosts, --allow-tags, --prices and --unbounded-threshold. --hosts only works together with --plan. --untyped-as only works together with --format prometheus. It needs no account and makes no network connection.
@@ -14,14 +16,18 @@ Datadog bills custom metrics per unique combination of metric name and tag value
 
 ## Installation
 
-Requires a Rust toolchain (Rust 2021 edition).
+With Rust 1.85 or newer, install from [crates.io](https://crates.io/crates/dd-metric-bill):
 
 ```sh
-cargo install --path .
+cargo install --locked dd-metric-bill
 dd-metric-bill --help
 ```
 
-Or build it with `cargo build --release`; the binary is `target/release/dd-metric-bill`.
+Ready-made binaries for Linux (x86_64), Windows (x86_64) and macOS (Intel and Apple Silicon), each with a SHA-256 checksum, are on the [Releases page](https://github.com/qwpp7g79y4-maker/dd-metric-bill/releases).
+
+For the latest `main`: `cargo install --locked --git https://github.com/qwpp7g79y4-maker/dd-metric-bill`.
+
+From a local clone: `cargo install --locked --path .`, or `cargo build --release`; the binary is `target/release/dd-metric-bill`.
 
 ## Quick start
 
@@ -117,6 +123,10 @@ dd-metric-bill applies Datadog's rules. The `host` tag counts, a histogram or di
 - There is no `--show-values` flag. The output shows tag keys and counts, not the tag values.
 - A price has at most 12 digits after the decimal point (`MAX_SCALE`) and a numerator of at most 10^18 (`MAX_NUMERATOR`). Trailing zeros in the fractional part are dropped before that limit. A price outside it makes the price file invalid (exit 2, message "field is too large").
 
+## Support
+
+dd-metric-bill is free to use. If it saves you money, you can support the work via [Ko-fi](https://ko-fi.com/pepai).
+
 ## License
 
 Licensed under either of
@@ -129,3 +139,5 @@ at your option. Copyright 2026 PEPAI.
 ## Contact
 
 PEPAI, pep_ai@icloud.com
+
+Report bugs and ideas via [Issues](https://github.com/qwpp7g79y4-maker/dd-metric-bill/issues); report security problems privately as described in [SECURITY.md](SECURITY.md).
