@@ -1,6 +1,9 @@
 //! Only regular files. The binary does not open a directory, FIFO, or device.
+//! Device, FIFO, socket and symlink cases use Unix paths and APIs, so they run on Unix only.
 
-use std::path::{Path, PathBuf};
+#[cfg(unix)]
+use std::path::Path;
+use std::path::PathBuf;
 use std::process::{Child, Command, Output, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
@@ -11,6 +14,7 @@ static SERIAL: AtomicU64 = AtomicU64::new(0);
 /// and the child is killed so it does not keep running.
 const DEADLINE: Duration = Duration::from_secs(1);
 
+#[cfg(unix)]
 const PRICE_JSON: &str = concat!(
     r#"{"currency":"TST","source":"source-test","date":"2026-01-02","#,
     r#""ingested_per_100":2}"#,
@@ -36,6 +40,7 @@ impl TempDir {
         path.to_str().expect("path is utf-8").to_string()
     }
 
+    #[cfg(unix)]
     fn join(&self, name: &str) -> PathBuf {
         self.0.join(name)
     }
@@ -122,58 +127,63 @@ fn four_times(error: &str, good: &str) {
     expected_rejection(error, &["count", "--prices", error, good], "price file");
 }
 
-fn good_sample(map: &TempDir) -> String {
-    map.write_file("sample.dogstatsd", "a:1|c\n")
+fn good_sample(tmp: &TempDir) -> String {
+    tmp.write_file("sample.dogstatsd", "a:1|c\n")
 }
 
 #[test]
+#[cfg(unix)]
 fn dev_zero_is_not_a_regular_file() {
-    let map = TempDir::new();
-    four_times("/dev/zero", &good_sample(&map));
+    let tmp = TempDir::new();
+    four_times("/dev/zero", &good_sample(&tmp));
 }
 
 #[test]
+#[cfg(unix)]
 fn fifo_without_writer_is_not_a_regular_file() {
-    let map = TempDir::new();
-    let fifo = map.join("pipe");
+    let tmp = TempDir::new();
+    let fifo = tmp.join("pipe");
     let status = Command::new("mkfifo")
         .arg(&fifo)
         .status()
         .expect("mkfifo start");
     assert!(status.success(), "mkfifo failed: {status}");
     let path = fifo.to_str().expect("path is utf-8");
-    four_times(path, &good_sample(&map));
+    four_times(path, &good_sample(&tmp));
 }
 
 #[test]
 fn directory_is_not_a_regular_file() {
-    let map = TempDir::new();
-    let path = map.0.to_str().expect("path is utf-8").to_string();
-    four_times(&path, &good_sample(&map));
+    let tmp = TempDir::new();
+    let path = tmp.0.to_str().expect("path is utf-8").to_string();
+    four_times(&path, &good_sample(&tmp));
 }
 
 #[test]
+#[cfg(unix)]
 fn dev_null_is_not_a_regular_file() {
-    let map = TempDir::new();
-    let good = good_sample(&map);
+    let tmp = TempDir::new();
+    let good = good_sample(&tmp);
     four_times("/dev/null", &good);
 
     // Symlink to a device: metadata follows the link, and the message names the path the user gave.
-    let link = map.join("null-link");
+    let link = tmp.join("null-link");
     std::os::unix::fs::symlink("/dev/null", &link).expect("symlink");
     let path = link.to_str().expect("path is utf-8");
     expected_rejection(path, &["count", path], "sample");
 }
 
 #[test]
+#[cfg(unix)]
 fn socket_is_not_a_regular_file() {
-    let map = TempDir::new();
-    let sock = map.join("sock");
+    let tmp = TempDir::new();
+    let sock = tmp.join("sock");
     let _listener = std::os::unix::net::UnixListener::bind(&sock).expect("socket");
     let path = sock.to_str().expect("path is utf-8");
-    four_times(path, &good_sample(&map));
+    four_times(path, &good_sample(&tmp));
 }
 
+#[cfg(unix)]
 fn output_ok(args: &[&str]) -> String {
     let output = output_within(args, DEADLINE);
     assert_eq!(output.status.code(), Some(0), "{}", failure(&output));
@@ -182,10 +192,11 @@ fn output_ok(args: &[&str]) -> String {
 }
 
 #[test]
+#[cfg(unix)]
 fn regular_file_and_symlink_work() {
-    let map = TempDir::new();
-    let sample = map.write_file("sample.dogstatsd", "a:1|c\n");
-    let sample_link = map.join("sample-link");
+    let tmp = TempDir::new();
+    let sample = tmp.write_file("sample.dogstatsd", "a:1|c\n");
+    let sample_link = tmp.join("sample-link");
     std::os::unix::fs::symlink(Path::new(&sample), &sample_link).expect("symlink");
     let link = sample_link.to_str().expect("path is utf-8");
 
@@ -197,10 +208,10 @@ fn regular_file_and_symlink_work() {
         "{direct}"
     );
 
-    let old = map.write_file("old.dogstatsd", "a:1|c\n");
-    let new = map.write_file("new.dogstatsd", "a:1|c\nb:1|c\n");
-    let old_link = map.join("old-link");
-    let new_link = map.join("new-link");
+    let old = tmp.write_file("old.dogstatsd", "a:1|c\n");
+    let new = tmp.write_file("new.dogstatsd", "a:1|c\nb:1|c\n");
+    let old_link = tmp.join("old-link");
+    let new_link = tmp.join("new-link");
     std::os::unix::fs::symlink(Path::new(&old), &old_link).expect("symlink");
     std::os::unix::fs::symlink(Path::new(&new), &new_link).expect("symlink");
     let diff_direct = output_ok(&["diff", &old, &new]);
@@ -212,8 +223,8 @@ fn regular_file_and_symlink_work() {
     assert_eq!(diff_direct, diff_via, "symlink to a diff sample differs");
     assert!(diff_direct.contains("delta: 1\n"), "{diff_direct}");
 
-    let price = map.write_file("price.json", PRICE_JSON);
-    let price_link = map.join("price-link");
+    let price = tmp.write_file("price.json", PRICE_JSON);
+    let price_link = tmp.join("price-link");
     std::os::unix::fs::symlink(Path::new(&price), &price_link).expect("symlink");
     let with = output_ok(&["count", "--prices", &price, &sample]);
     let with_link = output_ok(&[
