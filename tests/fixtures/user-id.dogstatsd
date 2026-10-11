@@ -1,0 +1,4 @@
+checkout:1|c|#env:prod,endpoint:pay,user_id:u1
+checkout:1|c|#env:prod,endpoint:pay,user_id:u2
+checkout:1|c|#env:prod,endpoint:pay,user_id:u3
+checkout:1|c|#env:prod,endpoint:cart,user_id:u3

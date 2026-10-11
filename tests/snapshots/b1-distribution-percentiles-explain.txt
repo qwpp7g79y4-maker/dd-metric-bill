@@ -1,0 +1,10 @@
+total: 40
+
+request.Latency type: distribution combinations: 4 count: 40 rule: D5
+  D5: DISTRIBUTION: 5 per unique tag combination (`count`, `sum`, `min`, `max`, `avg`); with percentiles (`p50`, `p75`, `p90`, `p95`, `p99`), 10 per combination (B1, tab Distribution). Configured factor: 10.
+  source: https://docs.datadoghq.com/account_management/billing/custom_metrics
+  tag: endpoint values: 2 added: 1
+  tag: host values: 2 added: 1
+  tag: status values: 2 added: 1
+
+estimate: Datadog bills the hourly average over the month; this is one snapshot (source: B1)

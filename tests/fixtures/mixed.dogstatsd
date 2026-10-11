@@ -1,0 +1,9 @@
+page.views:1|c|#host:web-1,env:prod
+page.views:1|c|#host:web-2,env:prod
+page.views:4|c|#env:prod,host:web-1
+queue.depth:3|g|#host:web-1
+queue.depth:9|g|#host:web-1
+rpc.latency:10|h|#host:web-1,endpoint:checkout
+rpc.latency:12|ms|#host:web-2,endpoint:checkout
+payload.bytes:100|d|#host:web-1
+users.online:alice|s|#host:web-1

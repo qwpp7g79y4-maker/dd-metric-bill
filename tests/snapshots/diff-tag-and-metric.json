@@ -1,0 +1,103 @@
+{
+  "allotment": null,
+  "estimate": "estimate: Datadog bills the hourly average over the month; this is one snapshot (source: B1)",
+  "inputs": {
+    "new": "tests/fixtures/diff-new.dogstatsd",
+    "old": "tests/fixtures/diff-old.dogstatsd"
+  },
+  "metrics": [
+    {
+      "delta": 1,
+      "name": "checkout",
+      "new": 1,
+      "old": 0,
+      "rule": "D3",
+      "type": "count"
+    },
+    {
+      "delta": 1,
+      "name": "page.views",
+      "new": 3,
+      "old": 2,
+      "rule": "D3",
+      "type": "count"
+    },
+    {
+      "delta": -1,
+      "name": "queue.depth",
+      "new": 0,
+      "old": 1,
+      "rule": "D3",
+      "type": "gauge"
+    }
+  ],
+  "schema_version": 1,
+  "source": "https://docs.datadoghq.com/account_management/billing/custom_metrics",
+  "tags": [
+    {
+      "keys": [
+        {
+          "delta": 0,
+          "key": "env",
+          "new_added": 0,
+          "new_values": 1,
+          "old_added": 0,
+          "old_values": 0
+        }
+      ],
+      "name": "checkout",
+      "type": "count"
+    },
+    {
+      "keys": [
+        {
+          "delta": 1,
+          "key": "region",
+          "new_added": 1,
+          "new_values": 2,
+          "old_added": 0,
+          "old_values": 0
+        },
+        {
+          "delta": 0,
+          "key": "env",
+          "new_added": 0,
+          "new_values": 1,
+          "old_added": 0,
+          "old_values": 1
+        },
+        {
+          "delta": 0,
+          "key": "host",
+          "new_added": 1,
+          "new_values": 2,
+          "old_added": 1,
+          "old_values": 2
+        }
+      ],
+      "name": "page.views",
+      "type": "count"
+    },
+    {
+      "keys": [
+        {
+          "delta": 0,
+          "key": "host",
+          "new_added": 0,
+          "new_values": 0,
+          "old_added": 0,
+          "old_values": 1
+        }
+      ],
+      "name": "queue.depth",
+      "type": "gauge"
+    }
+  ],
+  "tool": "dd-metric-bill",
+  "total": {
+    "delta": 1,
+    "new": 4,
+    "old": 3
+  },
+  "unbounded": []
+}

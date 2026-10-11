@@ -1,0 +1,16 @@
+total: 19
+
+page.views type: count combinations: 2 count: 2 rule: D3
+  tag: host values: 2 added: 1
+  tag: env values: 1 added: 0
+payload.bytes type: distribution combinations: 1 count: 5 rule: D5
+  tag: host values: 1 added: 0
+queue.depth type: gauge combinations: 1 count: 1 rule: D3
+  tag: host values: 1 added: 0
+rpc.latency type: histogram combinations: 2 count: 10 rule: D4
+  tag: host values: 2 added: 1
+  tag: endpoint values: 1 added: 0
+users.online type: gauge combinations: 1 count: 1 rule: D3
+  tag: host values: 1 added: 0
+
+estimate: Datadog bills the hourly average over the month; this is one snapshot (source: B1)

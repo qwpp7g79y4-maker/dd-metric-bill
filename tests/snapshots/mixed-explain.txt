@@ -1,0 +1,26 @@
+total: 19
+
+page.views type: count combinations: 2 count: 2 rule: D3
+  D3: COUNT, RATE and GAUGE: 1 metric per unique tag combination (B1, tabs Count/Rate and Gauge).
+  source: https://docs.datadoghq.com/account_management/billing/custom_metrics
+  tag: host values: 2 added: 1
+  tag: env values: 1 added: 0
+payload.bytes type: distribution combinations: 1 count: 5 rule: D5
+  D5: DISTRIBUTION: 5 per unique tag combination (`count`, `sum`, `min`, `max`, `avg`); with percentiles (`p50`, `p75`, `p90`, `p95`, `p99`), 10 per combination (B1, tab Distribution). Configured factor: 5.
+  source: https://docs.datadoghq.com/account_management/billing/custom_metrics
+  tag: host values: 1 added: 0
+queue.depth type: gauge combinations: 1 count: 1 rule: D3
+  D3: COUNT, RATE and GAUGE: 1 metric per unique tag combination (B1, tabs Count/Rate and Gauge).
+  source: https://docs.datadoghq.com/account_management/billing/custom_metrics
+  tag: host values: 1 added: 0
+rpc.latency type: histogram combinations: 2 count: 10 rule: D4
+  D4: HISTOGRAM: per unique tag combination, the number of agent aggregates. Default 5: `max`, `median`, `avg`, `count` (histogram_aggregates) plus `95percentile` (histogram_percentiles). Configurable with `--histogram-aggregates` and `--histogram-percentiles` (B1, tab Histogram). Configured factor: 5.
+  source: https://docs.datadoghq.com/account_management/billing/custom_metrics
+  tag: host values: 2 added: 1
+  tag: endpoint values: 1 added: 0
+users.online type: gauge combinations: 1 count: 1 rule: D3
+  D3: COUNT, RATE and GAUGE: 1 metric per unique tag combination (B1, tabs Count/Rate and Gauge).
+  source: https://docs.datadoghq.com/account_management/billing/custom_metrics
+  tag: host values: 1 added: 0
+
+estimate: Datadog bills the hourly average over the month; this is one snapshot (source: B1)

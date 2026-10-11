@@ -1,0 +1,45 @@
+{
+  "allotment": null,
+  "estimate": "estimate: Datadog bills the hourly average over the month; this is one snapshot (source: B1)",
+  "inputs": [
+    "tests/fixtures/b1-count.dogstatsd"
+  ],
+  "metrics": [
+    {
+      "combinations": 4,
+      "count": 4,
+      "name": "request.Latency",
+      "rule": "D3",
+      "rule_text": "COUNT, RATE and GAUGE: 1 metric per unique tag combination (B1, tabs Count/Rate and Gauge).",
+      "type": "count"
+    }
+  ],
+  "schema_version": 1,
+  "source": "https://docs.datadoghq.com/account_management/billing/custom_metrics",
+  "tags": [
+    {
+      "keys": [
+        {
+          "added": 1,
+          "key": "endpoint",
+          "values": 2
+        },
+        {
+          "added": 1,
+          "key": "host",
+          "values": 2
+        },
+        {
+          "added": 1,
+          "key": "status",
+          "values": 2
+        }
+      ],
+      "name": "request.Latency",
+      "type": "count"
+    }
+  ],
+  "tool": "dd-metric-bill",
+  "total": 4,
+  "unbounded": []
+}

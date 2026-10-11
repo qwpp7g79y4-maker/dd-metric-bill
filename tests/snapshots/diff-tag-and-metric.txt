@@ -1,0 +1,20 @@
+old total: 3
+new total: 4
+delta: 1
+
+new:
+checkout type: count count: 1
+
+removed:
+queue.depth type: gauge count: 1
+
+checkout type: count old: 0 new: 1 delta: 1 rule: D3
+  tag: env values: 0 to 1 added: 0 to 0 delta: 0
+page.views type: count old: 2 new: 3 delta: 1 rule: D3
+  tag: region values: 0 to 2 added: 0 to 1 delta: 1
+  tag: env values: 1 to 1 added: 0 to 0 delta: 0
+  tag: host values: 2 to 2 added: 1 to 1 delta: 0
+queue.depth type: gauge old: 1 new: 0 delta: -1 rule: D3
+  tag: host values: 1 to 0 added: 0 to 0 delta: 0
+
+estimate: Datadog bills the hourly average over the month; this is one snapshot (source: B1)

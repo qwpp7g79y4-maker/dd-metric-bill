@@ -1,0 +1,8 @@
+total: 4
+
+request.Latency type: count combinations: 4 count: 4 rule: D3
+  tag: endpoint values: 2 added: 1
+  tag: host values: 2 added: 1
+  tag: status values: 2 added: 1
+
+estimate: Datadog bills the hourly average over the month; this is one snapshot (source: B1)

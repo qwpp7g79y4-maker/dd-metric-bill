@@ -1,0 +1,4 @@
+page.views:1|c|#host:a,env:prod,region:eu
+page.views:1|c|#host:b,env:prod,region:eu
+page.views:1|c|#host:a,env:prod,region:us
+checkout:1|c|#env:prod

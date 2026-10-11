@@ -1,0 +1,5 @@
+request.Latency:10|h|#host:A,endpoint:X,status:200
+request.Latency:12|h|#host:B,endpoint:X,status:200
+request.Latency:40|h|#host:B,endpoint:X,status:400
+request.Latency:8|h|#host:B,endpoint:Y,status:200
+request.Latency:11|h|#host:A,endpoint:X,status:200

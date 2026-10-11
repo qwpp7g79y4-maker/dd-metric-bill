@@ -1,0 +1,10 @@
+total: 28
+
+request.Latency type: histogram combinations: 4 count: 28 rule: D4
+  D4: HISTOGRAM: per unique tag combination, the number of agent aggregates. Default 5: `max`, `median`, `avg`, `count` (histogram_aggregates) plus `95percentile` (histogram_percentiles). Configurable with `--histogram-aggregates` and `--histogram-percentiles` (B1, tab Histogram). Configured factor: 7.
+  source: https://docs.datadoghq.com/account_management/billing/custom_metrics
+  tag: endpoint values: 2 added: 1
+  tag: host values: 2 added: 1
+  tag: status values: 2 added: 1
+
+estimate: Datadog bills the hourly average over the month; this is one snapshot (source: B1)

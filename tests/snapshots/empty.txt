@@ -1,0 +1,2 @@
+total: 0
+estimate: Datadog bills the hourly average over the month; this is one snapshot (source: B1)
