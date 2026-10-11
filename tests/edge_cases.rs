@@ -461,7 +461,7 @@ fn utf16_and_utf32_never_show_tag_values() {
         ];
         for (encoding, contents) in encodings {
             let path = TempPath::bytes(&contents);
-            for extra in [&["--explain"][..], &["--json"][..]] {
+            for extra in [&[][..], &["--explain"][..], &["--json"][..]] {
                 let mut args = vec!["count", "--format", format_name];
                 args.extend_from_slice(extra);
                 args.push(path.path());
