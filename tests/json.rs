@@ -135,7 +135,7 @@ fn assert_not_tokens(got: &str, values: &[&str]) {
     }
 }
 
-fn assert_nergens(stdout: &str, stderr: &str, values: &[&str]) {
+fn assert_nowhere(stdout: &str, stderr: &str, values: &[&str]) {
     assert_not_text(stdout, values);
     assert_not_text(stderr, values);
 }
@@ -348,42 +348,42 @@ assert doc["unbounded"][0]["keys"][0]["reasons"] == ["pattern uuid"]
 assert all(tag["key"] != "env" for tag in doc["unbounded"][0]["keys"])
 "#,
     );
-    assert_nergens(&got, &stderr, &[uuid, "prod"]);
+    assert_nowhere(&got, &stderr, &[uuid, "prod"]);
 }
 
 #[test]
 fn tag_values_appear_nowhere_without_show_values() {
-    let stil = &[][..];
+    let silent = &[][..];
     let cases: &[(&[&str], &[&str], &[&str])] = &[
         (
             &["count", "tests/fixtures/b1-count.dogstatsd"],
             B1_TAG_VALUES,
-            stil,
+            silent,
         ),
         (
             &["count", "--json", "tests/fixtures/b1-count.dogstatsd"],
             B1_TAG_VALUES,
-            stil,
+            silent,
         ),
         (
             &["count", "tests/fixtures/mixed.dogstatsd"],
             MIXED_TAG_VALUES,
-            stil,
+            silent,
         ),
         (
             &["count", "--json", "tests/fixtures/mixed.dogstatsd"],
             MIXED_TAG_VALUES,
-            stil,
+            silent,
         ),
         (
             &["count", "tests/fixtures/user-id.dogstatsd"],
             USER_ID_TAG_VALUES,
-            stil,
+            silent,
         ),
         (
             &["count", "--json", "tests/fixtures/user-id.dogstatsd"],
             USER_ID_TAG_VALUES,
-            stil,
+            silent,
         ),
         (
             &[
@@ -408,7 +408,7 @@ fn tag_values_appear_nowhere_without_show_values() {
     for (args, text, tokens) in cases {
         let (code, stdout, stderr) = output(args);
         assert_eq!(code, 0, "{stderr}\n{stdout}");
-        assert_nergens(&stdout, &stderr, text);
+        assert_nowhere(&stdout, &stderr, text);
         assert_not_tokens(&stdout, tokens);
         assert_not_tokens(&stderr, tokens);
         if args.contains(&"--json") {
@@ -426,7 +426,7 @@ fn tag_values_appear_nowhere_without_show_values() {
         args.push(path.as_str());
         let (code, stdout, stderr) = output(&args);
         assert_eq!(code, 0, "{stderr}\n{stdout}");
-        assert_nergens(&stdout, &stderr, &[SENTINEL]);
+        assert_nowhere(&stdout, &stderr, &[SENTINEL]);
         if json {
             valid_via_json_tool(&stdout);
             assert!(stdout.contains("\"key\": \"user_id\""), "{stdout}");
@@ -445,7 +445,7 @@ fn tag_values_appear_nowhere_without_show_values() {
         args.push(new.as_str());
         let (code, stdout, stderr) = output(&args);
         assert_eq!(code, 0, "{stderr}\n{stdout}");
-        assert_nergens(&stdout, &stderr, &[SENTINEL]);
+        assert_nowhere(&stdout, &stderr, &[SENTINEL]);
     }
 }
 
@@ -462,7 +462,7 @@ fn json_budget_exceeded_stays_exit_1() {
     valid_via_json_tool(&stdout);
     assert!(stdout.contains("\"total\": 4"), "{stdout}");
     assert!(stderr.contains("budget exceeded: 4 > 3"), "{stderr}");
-    assert_nergens(&stdout, &stderr, B1_TAG_VALUES);
+    assert_nowhere(&stdout, &stderr, B1_TAG_VALUES);
 }
 
 #[test]
@@ -483,7 +483,7 @@ fn cargo_lock_has_no_network_crates() {
 #[test]
 fn src_does_not_use_std_net() {
     let mut paths = Vec::new();
-    verzamel(
+    collect_files(
         &Path::new(env!("CARGO_MANIFEST_DIR")).join("src"),
         &mut paths,
     );
@@ -499,14 +499,14 @@ fn src_does_not_use_std_net() {
     }
 }
 
-fn verzamel(dir: &Path, out: &mut Vec<PathBuf>) {
+fn collect_files(dir: &Path, out: &mut Vec<PathBuf>) {
     for entry in
         std::fs::read_dir(dir).unwrap_or_else(|err| panic!("read {}: {err}", dir.display()))
     {
         let entry = entry.expect("src item");
         let path = entry.path();
         if path.is_dir() {
-            verzamel(&path, out);
+            collect_files(&path, out);
         } else {
             out.push(path);
         }

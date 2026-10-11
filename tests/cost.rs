@@ -78,15 +78,15 @@ fn example_has_only_the_b1_price_for_ingested() {
     assert_eq!(fifty_above.lines[0].above, 50);
     assert_eq!(fifty_above.lines[0].amount, "0.05");
 
-    let one_erboven = estimate_cost(&prices, Some(0), Some(1), 0);
-    assert_eq!(one_erboven.lines[0].amount, "0.001");
+    let one_above = estimate_cost(&prices, Some(0), Some(1), 0);
+    assert_eq!(one_above.lines[0].amount, "0.001");
 }
 
 #[test]
 fn src_contains_no_price_values() {
-    let wortel = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+    let src_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
     let mut found = Vec::new();
-    visit(&wortel, &mut found);
+    visit(&src_dir, &mut found);
     assert!(found.is_empty(), "src contains a price value: {found:?}");
 }
 

@@ -363,16 +363,16 @@ fn run_case(sub: &str, flags: &[&str], files: &[TempPath]) -> Outcome {
 }
 
 fn shorten(text: &str) -> String {
-    let plat = text.replace('\n', "\\n");
-    if plat.chars().count() > 160 {
-        let end = plat
+    let flat = text.replace('\n', "\\n");
+    if flat.chars().count() > 160 {
+        let end = flat
             .char_indices()
             .nth(160)
             .map(|(i, _)| i)
-            .unwrap_or(plat.len());
-        format!("{}…", &plat[..end])
+            .unwrap_or(flat.len());
+        format!("{}…", &flat[..end])
     } else {
-        plat
+        flat
     }
 }
 

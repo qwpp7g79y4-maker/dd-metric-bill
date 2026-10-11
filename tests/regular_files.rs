@@ -169,7 +169,7 @@ fn dev_null_is_not_a_regular_file() {
 fn socket_is_not_a_regular_file() {
     let map = TempDir::new();
     let sock = map.join("sock");
-    let _luister = std::os::unix::net::UnixListener::bind(&sock).expect("socket");
+    let _listener = std::os::unix::net::UnixListener::bind(&sock).expect("socket");
     let path = sock.to_str().expect("path is utf-8");
     four_times(path, &good_sample(&map));
 }

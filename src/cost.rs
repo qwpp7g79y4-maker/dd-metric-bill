@@ -200,10 +200,10 @@ fn amount(above: u64, price: PricePer100) -> String {
     let divisor = 10i128
         .checked_pow(scale)
         .expect("scale fits after the bound in parse_prices");
-    let heel = numerator / divisor;
+    let whole = numerator / divisor;
     let rest = numerator % divisor;
     if rest == 0 {
-        return heel.to_string();
+        return whole.to_string();
     }
     let width = usize::try_from(scale).expect("scale fits in usize");
     let mut fraction = rest.to_string();
@@ -212,7 +212,7 @@ fn amount(above: u64, price: PricePer100) -> String {
     }
     let end = fraction.trim_end_matches('0').len();
     fraction.truncate(end);
-    format!("{heel}.{fraction}")
+    format!("{whole}.{fraction}")
 }
 
 fn require_text(obj: &Map<String, Value>, field: &'static str) -> Result<String, PriceError> {
@@ -278,18 +278,18 @@ fn parse_price(raw: &str) -> Result<PricePer100, PriceNumberError> {
     if mant.is_empty() {
         return Err(PriceNumberError::NotNumber);
     }
-    let (heel, frac) = match mant.split_once('.') {
-        Some((heel, frac)) => (heel, frac),
+    let (whole, frac) = match mant.split_once('.') {
+        Some((whole, frac)) => (whole, frac),
         None => (mant, ""),
     };
-    if heel.is_empty()
-        || !heel.bytes().all(|byte| byte.is_ascii_digit())
+    if whole.is_empty()
+        || !whole.bytes().all(|byte| byte.is_ascii_digit())
         || !frac.bytes().all(|byte| byte.is_ascii_digit())
     {
         return Err(PriceNumberError::NotNumber);
     }
-    let mut digits = String::with_capacity(heel.len() + frac.len());
-    digits.push_str(heel);
+    let mut digits = String::with_capacity(whole.len() + frac.len());
+    digits.push_str(whole);
     digits.push_str(frac);
     let digits = digits.trim_start_matches('0');
     if digits.is_empty() {
