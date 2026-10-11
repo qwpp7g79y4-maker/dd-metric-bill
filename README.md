@@ -4,7 +4,7 @@ English · [Nederlands](README.nl.md)
 
 Estimate how many billable Datadog custom metrics a sample produces, offline, before the bill arrives.
 
-[![crates.io](https://img.shields.io/crates/v/dd-metric-bill.svg)](https://crates.io/crates/dd-metric-bill) [![CI](https://github.com/qwpp7g79y4-maker/dd-metric-bill/actions/workflows/ci.yml/badge.svg)](https://github.com/qwpp7g79y4-maker/dd-metric-bill/actions/workflows/ci.yml)
+[![CI](https://github.com/qwpp7g79y4-maker/dd-metric-bill/actions/workflows/ci.yml/badge.svg)](https://github.com/qwpp7g79y4-maker/dd-metric-bill/actions/workflows/ci.yml)
 
 [Installation](#installation) • [Quick start](#quick-start) • [How it counts](#how-it-counts) • [Alternatives](#compared-with-alternatives) • [Limitations](#limitations) • [Reference](docs/reference.md)
 
@@ -16,18 +16,28 @@ Datadog bills custom metrics per unique combination of metric name and tag value
 
 ## Installation
 
-With Rust 1.85 or newer, install from [crates.io](https://crates.io/crates/dd-metric-bill):
+Ready-made binaries for Linux (x86_64, glibc and musl), Windows (x86_64) and macOS (Intel and Apple Silicon), each with a SHA-256 checksum, are on the [Releases page](https://github.com/qwpp7g79y4-maker/dd-metric-bill/releases). Unpack the archive and put `dd-metric-bill` on your `PATH`.
+
+With Rust 1.85 or newer, build and install it from source:
 
 ```sh
-cargo install --locked dd-metric-bill
+cargo install --locked --git https://github.com/qwpp7g79y4-maker/dd-metric-bill
 dd-metric-bill --help
 ```
 
-Ready-made binaries for Linux (x86_64), Windows (x86_64) and macOS (Intel and Apple Silicon), each with a SHA-256 checksum, are on the [Releases page](https://github.com/qwpp7g79y4-maker/dd-metric-bill/releases).
-
-For the latest `main`: `cargo install --locked --git https://github.com/qwpp7g79y4-maker/dd-metric-bill`.
-
 From a local clone: `cargo install --locked --path .`, or `cargo build --release`; the binary is `target/release/dd-metric-bill`.
+
+## System requirements
+
+| Platform | Release archive | Requirement |
+|---|---|---|
+| Linux x86_64 | `x86_64-unknown-linux-gnu` | glibc 2.34 or newer (for example Ubuntu 22.04, Debian 12, RHEL 9) |
+| Linux x86_64 | `x86_64-unknown-linux-musl` | none; statically linked, also for Alpine and older distributions |
+| macOS Apple Silicon | `aarch64-apple-darwin` | macOS 11 or newer |
+| macOS Intel | `x86_64-apple-darwin` | macOS 10.12 or newer |
+| Windows x86_64 | `x86_64-pc-windows-msvc` | Windows 10 or newer |
+
+The binaries are built and smoke-tested on GitHub-hosted runners (Ubuntu, macOS, Windows). Building from source needs Rust 1.85 or newer on any platform Rust supports.
 
 ## Quick start
 

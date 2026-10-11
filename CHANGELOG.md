@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.1.1] - 2026-10-11
+
+### Changed
+
+- The usage line in error messages names the binary `dd-metric-bill` on every platform (it showed `dd-metric-bill.exe` on Windows).
+- A price file that starts with a UTF-8 BOM is now read, as samples already were.
+
+### Added
+
+- Release binaries for `x86_64-unknown-linux-musl` (static, also for Alpine).
+- Release archives include `README.nl.md` and the reference in `docs/`.
+- System requirements per platform in the README.
+
+### Build
+
+- Releases run the full test suite on the tagged commit first, and each archive is unpacked and run with `--version` before it is published.
+- CI also tests on macOS Intel and runs clippy on Rust 1.85.
+
 ## [0.1.0] - 2026-10-11
 
 ### Added

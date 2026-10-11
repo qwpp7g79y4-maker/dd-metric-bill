@@ -11,7 +11,7 @@ cargo clippy --all-targets -- -D warnings
 cargo test
 ```
 
-These checks must pass before a change is merged. Test fixtures must be synthetic: never add real metric samples, account data, or secrets.
+Some tests check the JSON output with `python3` (standard library only), so Python 3 must be on your `PATH`. These checks must pass before a change is merged. Test fixtures must be synthetic: never add real metric samples, account data, or secrets.
 
 ## Issues
 

@@ -11,8 +11,13 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  ci:
+    name: CI on the tagged commit
+    uses: ./.github/workflows/ci.yml
+
   build:
     name: Build ${{ matrix.target }}
+    needs: ci
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -20,24 +25,41 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
           - target: x86_64-pc-windows-msvc
             os: windows-latest
           - target: x86_64-apple-darwin
-            os: macos-latest
+            os: macos-15-intel
+            macos_min: "10.12"
           - target: aarch64-apple-darwin
             os: macos-latest
+            macos_min: "11.0"
+    env:
+      MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macos_min }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
+      - name: Install musl tools
+        if: contains(matrix.target, 'musl')
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
       - run: cargo build --release --locked --target ${{ matrix.target }}
+      - name: Check the glibc baseline
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        run: |
+          newest=$(objdump -T target/${{ matrix.target }}/release/dd-metric-bill | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -1)
+          echo "newest symbol version: $newest"
+          # The README promises glibc 2.34 or newer.
+          test "$(printf '%s\n' "$newest" GLIBC_2.34 | sort -V | tail -1)" = GLIBC_2.34
       - name: Package
         shell: bash
         run: |
           name="dd-metric-bill-${GITHUB_REF_NAME}-${{ matrix.target }}"
           mkdir -p "dist/$name"
-          cp README.md LICENSE-MIT LICENSE-APACHE CHANGELOG.md "dist/$name/"
+          cp README.md README.nl.md LICENSE-MIT LICENSE-APACHE CHANGELOG.md "dist/$name/"
+          cp -R docs "dist/$name/"
           cd dist
           if [ "${{ runner.os }}" = "Windows" ]; then
             cp "../target/${{ matrix.target }}/release/dd-metric-bill.exe" "$name/"
@@ -49,6 +71,25 @@ jobs:
             shasum -a 256 "$name.tar.gz" > "$name.tar.gz.sha256"
           fi
           rm -rf "$name"
+      - name: Smoke test the archive
+        shell: bash
+        run: |
+          name="dd-metric-bill-${GITHUB_REF_NAME}-${{ matrix.target }}"
+          expected="dd-metric-bill ${GITHUB_REF_NAME#v}"
+          mkdir smoke
+          cd smoke
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            7z x "../dist/$name.zip" > /dev/null
+            got=$("./$name/dd-metric-bill.exe" --version | tr -d '\r')
+          else
+            tar -xzf "../dist/$name.tar.gz"
+            got=$("./$name/dd-metric-bill" --version)
+          fi
+          echo "$got"
+          test "$got" = "$expected"
+          test -f "$name/README.nl.md"
+          test -f "$name/docs/reference.md"
+          test -f "$name/docs/reference.nl.md"
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}

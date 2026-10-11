@@ -4,7 +4,7 @@
 
 Schat offline hoeveel factureerbare Datadog custom metrics een sample oplevert, voordat de rekening komt.
 
-[![crates.io](https://img.shields.io/crates/v/dd-metric-bill.svg)](https://crates.io/crates/dd-metric-bill) [![CI](https://github.com/qwpp7g79y4-maker/dd-metric-bill/actions/workflows/ci.yml/badge.svg)](https://github.com/qwpp7g79y4-maker/dd-metric-bill/actions/workflows/ci.yml)
+[![CI](https://github.com/qwpp7g79y4-maker/dd-metric-bill/actions/workflows/ci.yml/badge.svg)](https://github.com/qwpp7g79y4-maker/dd-metric-bill/actions/workflows/ci.yml)
 
 [Installatie](#installatie) • [Snel aan de slag](#snel-aan-de-slag) • [Hoe het rekent](#hoe-het-rekent) • [Alternatieven](#vergelijking-met-alternatieven) • [Beperkingen](#beperkingen) • [Referentie](docs/reference.nl.md)
 
@@ -18,18 +18,28 @@ Datadog rekent custom metrics af per unieke combinatie van metricnaam en tagwaar
 
 ## Installatie
 
-Met Rust 1.85 of nieuwer installeer je vanaf [crates.io](https://crates.io/crates/dd-metric-bill):
+Kant-en-klare binaries voor Linux (x86_64, glibc en musl), Windows (x86_64) en macOS (Intel en Apple Silicon), elk met een SHA-256-checksum, staan op de [Releases-pagina](https://github.com/qwpp7g79y4-maker/dd-metric-bill/releases). Pak het archief uit en zet `dd-metric-bill` in je `PATH`.
+
+Met Rust 1.85 of nieuwer bouw en installeer je hem vanuit de broncode:
 
 ```sh
-cargo install --locked dd-metric-bill
+cargo install --locked --git https://github.com/qwpp7g79y4-maker/dd-metric-bill
 dd-metric-bill --help
 ```
 
-Kant-en-klare binaries voor Linux (x86_64), Windows (x86_64) en macOS (Intel en Apple Silicon), elk met een SHA-256-checksum, staan op de [Releases-pagina](https://github.com/qwpp7g79y4-maker/dd-metric-bill/releases).
-
-Voor de nieuwste `main`: `cargo install --locked --git https://github.com/qwpp7g79y4-maker/dd-metric-bill`.
-
 Vanuit een lokale clone: `cargo install --locked --path .`, of `cargo build --release`; de binary is `target/release/dd-metric-bill`.
+
+## Systeemvereisten
+
+| Platform | Release-archief | Vereiste |
+|---|---|---|
+| Linux x86_64 | `x86_64-unknown-linux-gnu` | glibc 2.34 of nieuwer (bijvoorbeeld Ubuntu 22.04, Debian 12, RHEL 9) |
+| Linux x86_64 | `x86_64-unknown-linux-musl` | geen; statisch gelinkt, ook voor Alpine en oudere distributies |
+| macOS Apple Silicon | `aarch64-apple-darwin` | macOS 11 of nieuwer |
+| macOS Intel | `x86_64-apple-darwin` | macOS 10.12 of nieuwer |
+| Windows x86_64 | `x86_64-pc-windows-msvc` | Windows 10 of nieuwer |
+
+De binaries worden gebouwd en met een rooktest gecontroleerd op runners van GitHub (Ubuntu, macOS, Windows). Bouwen vanuit de broncode vraagt Rust 1.85 of nieuwer op elk platform dat Rust ondersteunt.
 
 ## Snel aan de slag
 
