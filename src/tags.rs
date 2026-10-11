@@ -513,7 +513,11 @@ m:1|c|#env:prod,request_id:550e8400-e29b-41d4-a716-446655440000
     }
 
     fn buckets(n: u64) -> String {
-        (1..=n).map(|i| format!("m:1|c|#bucket:v{i}\n")).collect()
+        use std::fmt::Write;
+        (1..=n).fold(String::new(), |mut out, i| {
+            let _ = writeln!(out, "m:1|c|#bucket:v{i}");
+            out
+        })
     }
 
     #[test]

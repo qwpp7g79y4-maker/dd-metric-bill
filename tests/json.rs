@@ -76,6 +76,8 @@ fn assert_snapshot(name: &str, args: &[impl AsRef<OsStr>]) -> String {
 
 fn valid_via_json_tool(text: &str) {
     let mut child = Command::new("python3")
+        // Python on Windows reads stdin as the ANSI code page unless told otherwise.
+        .env("PYTHONIOENCODING", "utf-8")
         .args(["-m", "json.tool"])
         .stdin(Stdio::piped())
         .stdout(Stdio::null())
@@ -96,6 +98,7 @@ fn valid_via_json_tool(text: &str) {
 
 fn python_check(text: &str, script: &str) {
     let mut child = Command::new("python3")
+        .env("PYTHONIOENCODING", "utf-8")
         .args(["-c", script])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -352,6 +355,9 @@ assert doc["unbounded"][0]["keys"][0]["reasons"] == ["pattern uuid"]
 assert all(tag["key"] != "env" for tag in doc["unbounded"][0]["keys"])
 "#,
     );
+    // The JSON output lists the input path; leave it out so a temporary
+    // directory name cannot look like a tag value.
+    let got = got.replace(path.as_str(), "<sample>");
     assert_nowhere(&got, &stderr, &[uuid, "prod"]);
 }
 

@@ -295,8 +295,14 @@ fn count_prometheus(args: &[&str], contents: &str) -> (i32, String, String) {
     cmd.arg(path.as_str());
     let output = cmd.output().expect("binary start");
     let code = output.status.code().unwrap_or(255);
-    let stdout = String::from_utf8(output.stdout).expect("stdout is utf-8");
-    let stderr = String::from_utf8(output.stderr).expect("stderr is utf-8");
+    // The JSON output lists the input path; leave it out so a temporary
+    // directory name cannot look like a tag value.
+    let stdout = String::from_utf8(output.stdout)
+        .expect("stdout is utf-8")
+        .replace(path.as_str(), "<sample>");
+    let stderr = String::from_utf8(output.stderr)
+        .expect("stderr is utf-8")
+        .replace(path.as_str(), "<sample>");
     (code, stdout, stderr)
 }
 

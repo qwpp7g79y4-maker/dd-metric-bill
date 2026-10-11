@@ -418,3 +418,68 @@ fn jsonl_without_tags_counts_without_metric_or_type_exit_2() {
     assert!(stderr.contains("line 2"), "{stderr}");
     assert!(!stderr.contains("canary-name"), "{stderr}");
 }
+
+/// UTF-16 and UTF-32 text without a BOM is valid UTF-8 full of NUL bytes.
+/// Whatever the parser makes of it, a tag value or host name never shows up,
+/// not even with the NUL bytes or their escapes taken out.
+#[test]
+fn utf16_and_utf32_never_show_tag_values() {
+    let samples = [
+        ("dogstatsd", "req:1|c|#user:CANARYUSER,host:CANARYHOST\n"),
+        (
+            "jsonl",
+            "{\"metric\":\"req\",\"type\":\"count\",\"tags\":[\"user:CANARYUSER\",\"host:CANARYHOST\"]}\n",
+        ),
+        (
+            "prometheus",
+            "# TYPE req counter\nreq{user=\"CANARYUSER\",host=\"CANARYHOST\"} 1\n",
+        ),
+    ];
+    for (format_name, text) in samples {
+        let units: Vec<u16> = text.encode_utf16().collect();
+        let encodings: [(&str, Vec<u8>); 4] = [
+            (
+                "utf-16le",
+                units.iter().flat_map(|u| u.to_le_bytes()).collect(),
+            ),
+            (
+                "utf-16be",
+                units.iter().flat_map(|u| u.to_be_bytes()).collect(),
+            ),
+            (
+                "utf-32le",
+                text.chars()
+                    .flat_map(|c| (c as u32).to_le_bytes())
+                    .collect(),
+            ),
+            (
+                "utf-32be",
+                text.chars()
+                    .flat_map(|c| (c as u32).to_be_bytes())
+                    .collect(),
+            ),
+        ];
+        for (encoding, contents) in encodings {
+            let path = TempPath::bytes(&contents);
+            for extra in [&["--explain"][..], &["--json"][..]] {
+                let mut args = vec!["count", "--format", format_name];
+                args.extend_from_slice(extra);
+                args.push(path.path());
+                let output = run(&args);
+                let all = format!(
+                    "{}{}",
+                    String::from_utf8_lossy(&output.stdout),
+                    String::from_utf8_lossy(&output.stderr)
+                )
+                .replace(path.path(), "");
+                let squeezed: String = all.chars().filter(|c| c.is_ascii_uppercase()).collect();
+                for canary in ["CANARYUSER", "CANARYHOST"] {
+                    assert!(
+                        !squeezed.contains(canary),
+                        "{format_name} {encoding} {extra:?} shows {canary}: {all:?}"
+                    );
+                }
+            }
+        }
+    }
+}

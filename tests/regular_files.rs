@@ -52,6 +52,26 @@ impl Drop for TempDir {
     }
 }
 
+#[cfg(unix)]
+struct ShortDir(PathBuf);
+
+#[cfg(unix)]
+impl ShortDir {
+    fn new() -> Self {
+        let n = SERIAL.fetch_add(1, Ordering::Relaxed);
+        let path = PathBuf::from(format!("/tmp/ddmb-{}-{n}", std::process::id()));
+        std::fs::create_dir(&path).expect("short temporary directory");
+        Self(path)
+    }
+}
+
+#[cfg(unix)]
+impl Drop for ShortDir {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+    }
+}
+
 struct ChildGuard(Option<Child>);
 
 impl Drop for ChildGuard {
@@ -177,7 +197,10 @@ fn dev_null_is_not_a_regular_file() {
 #[cfg(unix)]
 fn socket_is_not_a_regular_file() {
     let tmp = TempDir::new();
-    let sock = tmp.join("sock");
+    // A socket path may be at most about 100 bytes, so it goes in a short
+    // directory under /tmp instead of a possibly long $TMPDIR.
+    let short = ShortDir::new();
+    let sock = short.0.join("sock");
     let _listener = std::os::unix::net::UnixListener::bind(&sock).expect("socket");
     let path = sock.to_str().expect("path is utf-8");
     four_times(path, &good_sample(&tmp));
@@ -236,4 +259,30 @@ fn regular_file_and_symlink_work() {
     assert_eq!(with, with_link, "symlink to a price file differs");
     assert!(with.contains("source: source-test\n"), "{with}");
     assert!(with.contains("price: TST per 100\n"), "{with}");
+}
+
+/// A file name that is not UTF-8 is still a valid path on Linux.
+#[test]
+#[cfg(target_os = "linux")]
+fn file_name_that_is_not_utf8_works() {
+    use std::ffi::OsStr;
+    use std::os::unix::ffi::OsStrExt;
+    let tmp = TempDir::new();
+    let path = tmp.0.join(OsStr::from_bytes(b"sample-\xff.dogstatsd"));
+    std::fs::write(&path, "a:1|c\n").expect("write sample");
+    let output = binary()
+        .arg("count")
+        .arg(&path)
+        .output()
+        .expect("binary start");
+    assert_eq!(output.status.code(), Some(0), "{}", failure(&output));
+    let stdout = String::from_utf8(output.stdout).expect("stdout is utf-8");
+    assert!(stdout.starts_with("total: 1\n"), "{stdout}");
+    let output = binary()
+        .args(["diff"])
+        .arg(&path)
+        .arg(&path)
+        .output()
+        .expect("binary start");
+    assert_eq!(output.status.code(), Some(0), "{}", failure(&output));
 }
