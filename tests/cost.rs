@@ -33,6 +33,9 @@ fn contains_price_value(text: &str) -> Option<&str> {
     TOKENS.iter().copied().find(|token| text.contains(token))
 }
 
+/// Parallel tests can read the same clock value (Windows has a coarse clock), so a counter keeps names unique.
+static SERIAL: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
 struct TempFile(PathBuf);
 
 impl TempFile {
@@ -41,7 +44,8 @@ impl TempFile {
             .duration_since(std::time::UNIX_EPOCH)
             .expect("clock")
             .as_nanos();
-        let path = std::env::temp_dir().join(format!("dd-metric-bill-test-price-{nanos}.json"));
+        let n = SERIAL.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let path = std::env::temp_dir().join(format!("dd-metric-bill-test-price-{nanos}-{n}.json"));
         std::fs::write(&path, contents).expect("write price file");
         Self(path)
     }

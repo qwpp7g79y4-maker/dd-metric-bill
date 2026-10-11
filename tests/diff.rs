@@ -2,6 +2,9 @@ use std::ffi::OsStr;
 use std::path::Path;
 use std::process::{Command, Output};
 
+/// Parallel tests can read the same clock value (Windows has a coarse clock), so a counter keeps names unique.
+static SERIAL: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
 const ESTIMATE: &str =
     "estimate: Datadog bills the hourly average over the month; this is one snapshot (source: B1)";
 
@@ -70,7 +73,8 @@ impl TempSample {
             .duration_since(std::time::UNIX_EPOCH)
             .expect("clock")
             .as_nanos();
-        let path = std::env::temp_dir().join(format!("dd-metric-bill-test-diff-{nanos}.txt"));
+        let n = SERIAL.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let path = std::env::temp_dir().join(format!("dd-metric-bill-test-diff-{nanos}-{n}.txt"));
         std::fs::write(&path, contents).expect("write sample");
         Self(path)
     }
