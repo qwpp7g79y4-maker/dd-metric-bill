@@ -35,6 +35,7 @@ This page shows how each release of dd-metric-bill was checked, what we found, a
 ### How we checked
 
 - Independent code review, by reviewers who did not write the code.
+- An external automated code review. All its findings are fixed in this version.
 - Automated tests in CI. Runs: [release v0.1.1](https://github.com/qwpp7g79y4-maker/dd-metric-bill/actions/runs/38164324628), [CI on main](https://github.com/qwpp7g79y4-maker/dd-metric-bill/actions/workflows/ci.yml?query=branch%3Amain).
 - Dependency audit with `cargo audit`.
 
