@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fmt::Write;
 use std::path::Path;
 
@@ -44,6 +45,7 @@ pub fn render_count(
     allow: Option<&AllowReport>,
     cost: Option<&CostReport>,
 ) -> String {
+    let index = Index::build(tags, unbounded, allow);
     let mut out = String::new();
     writeln!(out, "total: {}", report.total).expect("writing to a String does not fail");
     if let Some(allotment) = allotment {
@@ -59,9 +61,9 @@ pub fn render_count(
                 &mut out,
                 metric,
                 explain,
-                keys_for(tags, &metric.name, metric.kind),
-                unbounded_for(unbounded, &metric.name, metric.kind),
-                allow_for(allow, &metric.name, metric.kind),
+                index.keys(&metric.name, metric.kind),
+                index.unbounded(&metric.name, metric.kind),
+                index.allow(&metric.name, metric.kind),
             );
         }
         out.push('\n');
@@ -151,13 +153,14 @@ pub fn render_count_json(
     allow: Option<&AllowReport>,
     cost: Option<&CostReport>,
 ) -> String {
+    let index = Index::build(tags, unbounded, allow);
     let mut doc = base_document(
         json!(inputs
             .iter()
             .map(|path| input_path(path.as_ref()))
             .collect::<Vec<_>>()),
         json!(report.total),
-        metrics_json(report, allow),
+        metrics_json(report, &index),
         tags_json(tags),
         unbounded_json(unbounded),
         allotment.map(allotment_json).unwrap_or(Value::Null),
@@ -239,12 +242,12 @@ fn input_path(path: &Path) -> String {
     path.display().to_string()
 }
 
-fn metrics_json(report: &CountReport, allow: Option<&AllowReport>) -> Value {
+fn metrics_json(report: &CountReport, index: &Index<'_>) -> Value {
     Value::Array(
         report
             .metrics
             .iter()
-            .map(|metric| metric_json(metric, allow_for(allow, &metric.name, metric.kind)))
+            .map(|metric| metric_json(metric, index.allow(&metric.name, metric.kind)))
             .collect(),
     )
 }
@@ -515,29 +518,75 @@ fn write_metric(
     }
 }
 
-fn allow_for<'a>(
-    allow: Option<&'a AllowReport>,
-    name: &str,
-    kind: Kind,
-) -> Option<&'a MetricAllow> {
-    allow.and_then(|report| {
-        report
-            .metrics
-            .iter()
-            .find(|metric| metric.name == name && metric.kind == kind)
-    })
+/// First match for each metric name and kind. Output order stays the report order.
+struct Index<'a> {
+    tags: HashMap<(&'a str, u8), &'a [TagKey]>,
+    unbounded: HashMap<(&'a str, u8), &'a [UnboundedTag]>,
+    allow: HashMap<(&'a str, u8), &'a MetricAllow>,
 }
 
-fn unbounded_for<'a>(
-    unbounded: &'a [MetricUnbounded],
-    name: &str,
-    kind: Kind,
-) -> &'a [UnboundedTag] {
-    unbounded
-        .iter()
-        .find(|item| item.name == name && item.kind == kind)
-        .map(|item| item.keys.as_slice())
-        .unwrap_or(&[])
+const NO_KEYS: &[TagKey] = &[];
+const NO_UNBOUNDED: &[UnboundedTag] = &[];
+
+impl<'a> Index<'a> {
+    fn build(
+        tags: &'a [MetricTags],
+        unbounded: &'a [MetricUnbounded],
+        allow: Option<&'a AllowReport>,
+    ) -> Self {
+        let mut tags_map = HashMap::with_capacity(tags.len());
+        for item in tags {
+            tags_map
+                .entry((item.name.as_str(), kind_ord(item.kind)))
+                .or_insert(item.keys.as_slice());
+        }
+        let mut unbounded_map = HashMap::with_capacity(unbounded.len());
+        for item in unbounded {
+            unbounded_map
+                .entry((item.name.as_str(), kind_ord(item.kind)))
+                .or_insert(item.keys.as_slice());
+        }
+        let allow_metrics = allow.map(|report| report.metrics.as_slice()).unwrap_or(&[]);
+        let mut allow_map = HashMap::with_capacity(allow_metrics.len());
+        for item in allow_metrics {
+            allow_map
+                .entry((item.name.as_str(), kind_ord(item.kind)))
+                .or_insert(item);
+        }
+        Self {
+            tags: tags_map,
+            unbounded: unbounded_map,
+            allow: allow_map,
+        }
+    }
+
+    fn keys(&self, name: &str, kind: Kind) -> &'a [TagKey] {
+        self.tags
+            .get(&(name, kind_ord(kind)))
+            .copied()
+            .unwrap_or(NO_KEYS)
+    }
+
+    fn unbounded(&self, name: &str, kind: Kind) -> &'a [UnboundedTag] {
+        self.unbounded
+            .get(&(name, kind_ord(kind)))
+            .copied()
+            .unwrap_or(NO_UNBOUNDED)
+    }
+
+    fn allow(&self, name: &str, kind: Kind) -> Option<&'a MetricAllow> {
+        self.allow.get(&(name, kind_ord(kind))).copied()
+    }
+}
+
+fn kind_ord(kind: Kind) -> u8 {
+    match kind {
+        Kind::Count => 0,
+        Kind::Gauge => 1,
+        Kind::Histogram => 2,
+        Kind::Distribution => 3,
+        Kind::Untyped => 4,
+    }
 }
 
 fn reason_text(reasons: &[UnboundedReason]) -> String {
@@ -547,13 +596,6 @@ fn reason_text(reasons: &[UnboundedReason]) -> String {
         .map(reason_label)
         .collect::<Vec<_>>()
         .join(", ")
-}
-
-fn keys_for<'a>(tags: &'a [MetricTags], name: &str, kind: Kind) -> &'a [TagKey] {
-    tags.iter()
-        .find(|item| item.name == name && item.kind == kind)
-        .map(|item| item.keys.as_slice())
-        .unwrap_or(&[])
 }
 
 fn kind_label(kind: Kind) -> &'static str {

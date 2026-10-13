@@ -43,7 +43,7 @@ The binaries are built and smoke-tested on GitHub-hosted runners (Ubuntu, macOS,
 
 ## Quick start
 
-These are the real outputs of the binary on the synthetic fixtures in `tests/fixtures`. A test runs every example and compares the output.
+These are the real outputs of the binary on the synthetic fixtures in `tests/fixtures`. A test runs every example and compares the output. The release archive includes these fixtures, so the same commands work in the unpacked directory.
 
 The worked example from the Datadog documentation, as a count. Four unique combinations, so the total is 4:
 
@@ -129,7 +129,7 @@ dd-metric-bill applies Datadog's rules. The `host` tag counts, a histogram or di
 - Only the "Latest Version" mapping is followed. The mapping comes from B2 (Mapping Prometheus Metrics to Datadog Metrics, https://docs.datadoghq.com/integrations/guide/prometheus-metrics/, read 7 October 2026). Skipping untyped metrics comes from B3 (Datadog, OpenMetrics, section Missing untyped metrics, https://docs.datadoghq.com/integrations/openmetrics/, read 7 October 2026): "By default, the integration skips metrics that come without a type on a Prometheus exposition." That is the default behavior of the Datadog Agent OpenMetrics check.
 - A UTF-8 BOM at the start of a file is skipped, in DogStatsD, JSONL, and Prometheus. That is a choice: the BOM does not belong to the metric name. A BOM later in the file stays.
 - The `_created` sample of an OpenMetrics counter does not count. What Datadog does with it is not verified.
-- Only regular files are read, as a sample for `count` and `diff` and as `--prices`. A directory, FIFO, device, or other non-regular path is not opened.
+- Only regular files are read, as a sample for `count` and `diff` and as `--prices`. A directory, FIFO, device, or other non-regular path is not read. Symlinks are followed. The opened file is checked, so the read does not wait when the path is a FIFO.
 - A Prometheus histogram or summary series that lands on the same name and kind as another sample counts once. The same tags are one combination. `latency_count` from a histogram `latency` and a counter named `latency.count` with the same labels are one metric.
 - A report that cannot be written exits 2 (`could not write the report: REASON`). That is not success, and it does not panic. `--help` and `--version` that cannot be written exit 3. Control characters in currency, source, date, and in a metric name on an error line are printed as `\xNN`.
 - Only count accepts --explain, --plan, --hosts, --allow-tags, --prices and --unbounded-threshold. On `diff` they exit 3 (`option does not apply to diff: <option>`), before samples or the price file are read.

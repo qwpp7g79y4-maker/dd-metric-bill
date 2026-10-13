@@ -1,4 +1,5 @@
-use std::io::{self, Write};
+use std::fs::File;
+use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
@@ -440,27 +441,92 @@ fn apply_untyped(samples: &mut [Sample], chosen: UntypedAs) {
 
 /// Reads text from a regular file.
 ///
-/// `metadata` follows symlinks. A directory, FIFO, device, or other
-/// non-regular path is not opened: `open` on a FIFO with no writer would hang.
+/// The path is opened without waiting, and only that opened file is read,
+/// after its type is checked. A symlink is followed. A directory, FIFO,
+/// device, or other non-regular file is not read. The type comes from the
+/// opened file, so a path that becomes a FIFO between a separate check and
+/// the read does not wait for a writer.
 fn read_text(path: &Path, kind: &str) -> Result<String, u8> {
-    match std::fs::metadata(path) {
-        Ok(meta) => {
-            if !meta.is_file() {
-                refuse_read(kind, path, "not a regular file");
-                return Err(EXIT_INPUT);
-            }
-        }
-        Err(err) => {
-            refuse_read(kind, path, err);
+    let mut file = match open_regular(path) {
+        Ok(file) => file,
+        Err(reason) => {
+            refuse_read(kind, path, reason);
             return Err(EXIT_INPUT);
         }
-    }
-    match std::fs::read_to_string(path) {
-        Ok(text) => Ok(text),
+    };
+    let mut text = String::new();
+    match file.read_to_string(&mut text) {
+        Ok(_) => Ok(text),
         Err(err) => {
             refuse_read(kind, path, err);
             Err(EXIT_INPUT)
         }
+    }
+}
+
+enum ReadFail {
+    NotRegular,
+    Io(std::io::Error),
+}
+
+impl std::fmt::Display for ReadFail {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ReadFail::NotRegular => f.write_str("not a regular file"),
+            ReadFail::Io(err) => write!(f, "{err}"),
+        }
+    }
+}
+
+/// Opens `path` for reading when the opened file is a regular file.
+///
+/// On Unix the open does not block: a FIFO returns at once, and the check
+/// uses the opened file rather than a second lookup of the path.
+#[cfg(unix)]
+fn open_regular(path: &Path) -> Result<File, ReadFail> {
+    use std::fs::OpenOptions;
+    use std::os::unix::fs::OpenOptionsExt;
+
+    let mut options = OpenOptions::new();
+    options.read(true);
+    options.custom_flags(O_NONBLOCK);
+    match options.open(path) {
+        Ok(file) => {
+            let meta = file.metadata().map_err(ReadFail::Io)?;
+            if meta.is_file() {
+                Ok(file)
+            } else {
+                Err(ReadFail::NotRegular)
+            }
+        }
+        // A directory or a socket fails at open. Keep the same message as a
+        // FIFO: the path exists and is not a regular file.
+        Err(err) => match std::fs::metadata(path) {
+            Ok(meta) if !meta.is_file() => Err(ReadFail::NotRegular),
+            _ => Err(ReadFail::Io(err)),
+        },
+    }
+}
+
+/// `O_NONBLOCK`. Linux and Android use octal 04000; the BSDs and macOS use `0x4`.
+#[cfg(any(target_os = "linux", target_os = "android"))]
+const O_NONBLOCK: i32 = 0o4000;
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "freebsd",
+    target_os = "netbsd",
+    target_os = "openbsd",
+    target_os = "dragonfly",
+))]
+const O_NONBLOCK: i32 = 0x4;
+
+#[cfg(not(unix))]
+fn open_regular(path: &Path) -> Result<File, ReadFail> {
+    match std::fs::metadata(path) {
+        Ok(meta) if !meta.is_file() => Err(ReadFail::NotRegular),
+        Ok(_) => File::open(path).map_err(ReadFail::Io),
+        Err(err) => Err(ReadFail::Io(err)),
     }
 }
 

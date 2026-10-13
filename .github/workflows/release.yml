@@ -60,6 +60,13 @@ jobs:
           mkdir -p "dist/$name"
           cp README.md README.nl.md LICENSE-MIT LICENSE-APACHE CHANGELOG.md "dist/$name/"
           cp -R docs "dist/$name/"
+          mkdir -p "dist/$name/tests/fixtures"
+          cp tests/fixtures/b1-count.dogstatsd \
+            tests/fixtures/b1-histogram.dogstatsd \
+            tests/fixtures/diff-old.dogstatsd \
+            tests/fixtures/diff-new.dogstatsd \
+            tests/fixtures/empty.dogstatsd \
+            "dist/$name/tests/fixtures/"
           cd dist
           if [ "${{ runner.os }}" = "Windows" ]; then
             cp "../target/${{ matrix.target }}/release/dd-metric-bill.exe" "$name/"
@@ -90,6 +97,17 @@ jobs:
           test -f "$name/README.nl.md"
           test -f "$name/docs/reference.md"
           test -f "$name/docs/reference.nl.md"
+          test -f "$name/tests/fixtures/b1-count.dogstatsd"
+          test -f "$name/tests/fixtures/b1-histogram.dogstatsd"
+          test -f "$name/tests/fixtures/diff-old.dogstatsd"
+          test -f "$name/tests/fixtures/diff-new.dogstatsd"
+          test -f "$name/tests/fixtures/empty.dogstatsd"
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            total=$(cd "$name" && ./dd-metric-bill.exe count tests/fixtures/b1-count.dogstatsd | head -n 1 | tr -d '\r')
+          else
+            total=$(cd "$name" && ./dd-metric-bill count tests/fixtures/b1-count.dogstatsd | head -n 1)
+          fi
+          test "$total" = "total: 4"
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}

@@ -127,7 +127,7 @@ Each metric has `name`, `type`, `combinations`, `count`, `rule`, and `rule_text`
 
 When stdout cannot take the report, stderr is `could not write the report: REASON` and the exit code is 2. `--help` and `--version` that cannot be written exit 3, and stderr is `could not write the message: REASON`. A failed write does not panic.
 
-A sample and a price file must be regular files. `metadata` follows symlinks. A directory, FIFO, device, or other non-regular path is not opened, so a FIFO with no writer does not hang. The message is `cannot read sample: PATH: REASON` or `cannot read price file: PATH: REASON`, and `REASON` includes `not a regular file` when the path is not a regular file.
+A sample and a price file must be regular files. The path is opened without waiting, and only that opened file is read. A symlink is followed. A directory, FIFO, device, or other non-regular path is not read, so a FIFO with no writer does not hang. The type comes from the opened file, so a path that becomes a FIFO does not make the read wait. The message is `cannot read sample: PATH: REASON` or `cannot read price file: PATH: REASON`, and `REASON` includes `not a regular file` when the path is not a regular file.
 
 A price file that is not valid JSON, not an object, or has a bad field prints `invalid price file: PATH: DETAIL`. `DETAIL` is one of: `not valid json`, `not an object`, `missing field: FIELD`, `empty field: FIELD`, `field is not text: FIELD`, `field is not a number: FIELD`, `field is negative: FIELD`, `field is too large: FIELD`, `unknown field`.
 

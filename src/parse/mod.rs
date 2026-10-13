@@ -2,7 +2,36 @@ mod dogstatsd;
 mod jsonl;
 mod prometheus;
 
+use std::collections::HashSet;
 use std::fmt;
+
+/// Lines already stored.
+///
+/// A repeated line is one sample. The bill counts unique combinations, and
+/// keeping every copy of the same line is not bounded in memory.
+#[derive(Default)]
+pub(crate) struct FirstLines {
+    seen: HashSet<String>,
+}
+
+impl FirstLines {
+    pub(crate) fn new() -> Self {
+        Self {
+            seen: HashSet::new(),
+        }
+    }
+
+    /// `true` the first time `line` is seen.
+    ///
+    /// A line that is already stored does not allocate another copy.
+    pub(crate) fn is_first(&mut self, line: &str) -> bool {
+        if self.seen.contains(line) {
+            return false;
+        }
+        self.seen.insert(line.to_string());
+        true
+    }
+}
 
 pub use dogstatsd::parse_dogstatsd;
 pub use jsonl::parse_jsonl;

@@ -440,6 +440,29 @@ fn option_and_error_tables_match_the_binary() {
 }
 
 #[test]
+fn release_archive_ships_quickstart_fixtures() {
+    let release = read(".github/workflows/release.yml");
+    let readme = read(README);
+    let quick = section(&readme, "## Quick start");
+    let mut paths = Vec::new();
+    for (args, _) in examples(quick) {
+        for arg in &args {
+            if arg.starts_with("tests/fixtures/") {
+                paths.push(arg.clone());
+            }
+        }
+    }
+    assert!(paths.len() >= 5, "{paths:?}");
+    for path in &paths {
+        assert!(release.contains(path), "release.yml does not ship {path}");
+    }
+    assert!(
+        release.contains("count tests/fixtures/b1-count.dogstatsd"),
+        "the archive smoke test does not run the quickstart"
+    );
+}
+
+#[test]
 fn fixture_readme_describes_every_file_as_synthetic() {
     let text = read("tests/fixtures/README.md");
     let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");

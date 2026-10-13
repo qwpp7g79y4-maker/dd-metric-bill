@@ -32,13 +32,15 @@ fn fail(line: usize, reason: Fail) -> ParseError {
 /// `tags` is a list of `key:value` or `key` without a value.
 /// Other fields, such as a value, are ignored. Empty lines are ignored too.
 /// A UTF-8 BOM at the start is skipped.
+/// An identical line is kept once: a repeated line does not add a sample.
 pub fn parse_jsonl(input: &str) -> Result<Vec<Sample>, ParseError> {
     let input = super::without_bom(input);
     let mut samples = Vec::new();
+    let mut seen = super::FirstLines::new();
     for (idx, raw) in input.lines().enumerate() {
         let line_no = idx + 1;
         let line = raw.trim();
-        if line.is_empty() {
+        if line.is_empty() || !seen.is_first(line) {
             continue;
         }
         samples.push(parse_line(line, line_no)?);

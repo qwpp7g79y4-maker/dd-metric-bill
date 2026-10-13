@@ -45,7 +45,7 @@ De binaries worden gebouwd en met een rooktest gecontroleerd op runners van GitH
 
 ## Snel aan de slag
 
-Dit is de echte uitvoer van de binary op de synthetische fixtures in `tests/fixtures`. Een test draait elk voorbeeld en vergelijkt de uitvoer.
+Dit is de echte uitvoer van de binary op de synthetische fixtures in `tests/fixtures`. Een test draait elk voorbeeld en vergelijkt de uitvoer. Het release-archief bevat deze fixtures, zodat dezelfde opdrachten werken in de uitgepakte map.
 
 Het rekenvoorbeeld uit de Datadog-documentatie, als count. Vier unieke combinaties, dus totaal 4:
 
@@ -131,7 +131,7 @@ dd-metric-bill past de regels van Datadog toe. De `host`-tag telt mee, een histo
 - Alleen de "Latest Version"-mapping wordt gevolgd. De mapping komt uit B2 (Mapping Prometheus Metrics to Datadog Metrics, https://docs.datadoghq.com/integrations/guide/prometheus-metrics/, gelezen 7 oktober 2026). Het overslaan van untyped komt uit B3 (Datadog, OpenMetrics, sectie Missing untyped metrics, https://docs.datadoghq.com/integrations/openmetrics/, gelezen 7 oktober 2026): "By default, the integration skips metrics that come without a type on a Prometheus exposition." Dat is het standaardgedrag van de OpenMetrics-check van de Datadog Agent.
 - Een UTF-8 BOM aan het begin van een bestand wordt overgeslagen, in DogStatsD, JSONL en Prometheus. Dat is een keuze: de BOM hoort niet bij de metricnaam. Een BOM verderop in het bestand blijft staan.
 - Het `_created`-sample van een OpenMetrics-counter telt niet mee. Wat Datadog daarmee doet is niet geverifieerd.
-- Alleen gewone bestanden worden gelezen, als sample bij `count` en `diff` en als `--prices`. Een map, FIFO, device of ander niet-regulier pad wordt niet geopend.
+- Alleen gewone bestanden worden gelezen, als sample bij `count` en `diff` en als `--prices`. Een map, FIFO, device of ander niet-regulier pad wordt niet gelezen. Symlinks worden gevolgd. Het geopende bestand wordt gecontroleerd, zodat het lezen niet wacht als het pad een FIFO is.
 - Een Prometheus-histogram of -summary die op dezelfde naam en hetzelfde soort uitkomt als een ander sample telt één keer. Dezelfde tags zijn één combinatie. `latency_count` van een histogram `latency` en een counter `latency.count` met dezelfde labels zijn één metric.
 - Een verslag dat niet geschreven kan worden geeft exit 2 (`could not write the report: REASON`). Dat is geen succes en het geeft geen panic. `--help` en `--version` die niet geschreven kunnen worden geven exit 3. Stuurtekens in currency, source, date en in een metricnaam op een foutregel worden als `\xNN` getoond.
 - Alleen count accepteert --explain, --plan, --hosts, --allow-tags, --prices en --unbounded-threshold. Bij `diff` geven ze exit 3 (`option does not apply to diff: <option>`), vóór het lezen van samples of het prijsbestand.

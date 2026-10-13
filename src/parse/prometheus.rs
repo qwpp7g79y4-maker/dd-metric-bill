@@ -79,10 +79,12 @@ fn fail(line: usize, reason: Fail) -> ParseError {
 /// `name.sum` (count, without `quantile`) and `name.quantile` (gauge, with
 /// `quantile`). A metric name may contain a dot. `# TYPE` comes before the samples.
 /// A UTF-8 BOM at the start is skipped.
+/// An identical sample line is kept once: a repeated line does not add a sample.
 pub fn parse_prometheus(input: &str) -> Result<Vec<Sample>, ParseError> {
     let input = super::without_bom(input);
     let mut types: BTreeMap<String, Family> = BTreeMap::new();
     let mut samples = Vec::new();
+    let mut seen = super::FirstLines::new();
     for (idx, raw) in input.lines().enumerate() {
         let line_no = idx + 1;
         let line = raw.trim();
@@ -98,6 +100,9 @@ pub fn parse_prometheus(input: &str) -> Result<Vec<Sample>, ParseError> {
             continue;
         }
         if line.starts_with('#') {
+            continue;
+        }
+        if !seen.is_first(line) {
             continue;
         }
         let (name, tags) = parse_sample(line).map_err(|reason| fail(line_no, reason))?;

@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use crate::count::{count_by_metric, CountError};
 use crate::parse::{Kind, Sample};
@@ -144,11 +144,17 @@ fn sides(
         percentiles,
     )?;
     let tags = tag_breakdown(samples, None);
+    let mut tags_by_metric = HashMap::with_capacity(tags.len());
+    for item in &tags {
+        tags_by_metric
+            .entry((item.name.as_str(), kind_ord(item.kind)))
+            .or_insert(item);
+    }
     let mut map = BTreeMap::new();
     for metric in report.metrics {
-        let tag_map = tags
-            .iter()
-            .find(|item| item.name == metric.name && item.kind == metric.kind)
+        let key = (metric.name.as_str(), kind_ord(metric.kind));
+        let tag_map = tags_by_metric
+            .get(&key)
             .map(|item| {
                 item.keys
                     .iter()
