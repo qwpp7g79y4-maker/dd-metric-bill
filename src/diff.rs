@@ -11,7 +11,7 @@ use crate::tags::tag_breakdown;
 pub struct DiffReport {
     pub old_total: u64,
     pub new_total: u64,
-    pub delta: i64,
+    pub delta: i128,
     pub metrics: Vec<MetricDelta>,
 }
 
@@ -26,7 +26,7 @@ pub struct MetricDelta {
     pub kind: Kind,
     pub old_count: Option<u64>,
     pub new_count: Option<u64>,
-    pub delta: i64,
+    pub delta: i128,
     pub rule: &'static str,
     pub tags: Vec<TagDelta>,
 }
@@ -43,7 +43,7 @@ pub struct TagDelta {
     pub new_values: u64,
     pub old_added: u64,
     pub new_added: u64,
-    pub delta: i64,
+    pub delta: i128,
 }
 
 struct TagSide {
@@ -219,12 +219,9 @@ fn tag_deltas(
     tags
 }
 
-fn delta(old: u64, new: u64) -> i64 {
-    if new >= old {
-        i64::try_from(new - old).expect("difference fits in i64")
-    } else {
-        -i64::try_from(old - new).expect("difference fits in i64")
-    }
+/// New count minus old count. Every pair of `u64` counts fits in `i128`.
+fn delta(old: u64, new: u64) -> i128 {
+    i128::from(new) - i128::from(old)
 }
 
 fn kind_ord(kind: Kind) -> u8 {

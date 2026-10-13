@@ -48,7 +48,7 @@ Prices come only from a JSON file you pass with `--prices`. The tool does not fe
 
 Required fields: `currency`, `source`, `date`, and `ingested_per_100`. `indexed_per_100` may be absent. Any other field makes the file invalid. `currency`, `source`, and `date` are text and must not be empty after trimming. A price is a JSON number. A comma (`0,10`) is not valid JSON.
 
-A price has at most 12 digits after the decimal point (`MAX_SCALE`) and a numerator of at most 10^18 (`MAX_NUMERATOR`). Trailing zeros in the fractional part are dropped before that limit. A price outside it makes the price file invalid (exit 2, message "field is too large"). A negative price is rejected. The amount is whole-number arithmetic: metrics above the allotment, times the price per 100, divided by 100. The decimal point is `.`, and trailing zeros are not printed.
+A price is read as an exact decimal from the JSON number, not as a binary floating-point value. A price has at most 12 digits after the decimal point (`MAX_SCALE`) and a numerator of at most 10^18 (`MAX_NUMERATOR`). Trailing zeros in the fractional part are dropped before that limit. A price outside it makes the price file invalid (exit 2, message "field is too large"). A negative price is rejected. The amount is whole-number arithmetic: metrics above the allotment, times the price per 100, divided by 100. The decimal point is `.`, and trailing zeros are not printed.
 
 Without `--plan` the file still prints currency, source, and date, and there is no cost line. With `--plan`, each configured volume is priced against the same allotment. Ingested is priced only when `--allow-tags` is set. Indexed is priced only when `indexed_per_100` is present. Usage below the allotment prints a cost of 0.
 

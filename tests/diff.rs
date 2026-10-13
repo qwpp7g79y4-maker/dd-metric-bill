@@ -238,6 +238,83 @@ fn missing_sample_is_exit_2() {
     assert!(stderr.contains("cannot read sample"), "{stderr}");
 }
 
+/// Files named `empty` and `hist`, matching the reported command.
+struct NamedPair {
+    dir: std::path::PathBuf,
+}
+
+impl NamedPair {
+    fn new(hist: &str) -> Self {
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos();
+        let n = SERIAL.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let dir = std::env::temp_dir().join(format!("dd-metric-bill-test-diff-pair-{nanos}-{n}"));
+        std::fs::create_dir(&dir).expect("temp dir");
+        std::fs::write(dir.join("empty"), "").expect("empty sample");
+        std::fs::write(dir.join("hist"), hist).expect("hist sample");
+        Self { dir }
+    }
+}
+
+impl Drop for NamedPair {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.dir);
+    }
+}
+
+fn diff_histogram(aggregates: &str, hist: &str) -> Output {
+    let pair = NamedPair::new(hist);
+    binary()
+        .current_dir(&pair.dir)
+        .args([
+            "diff",
+            "--histogram-aggregates",
+            aggregates,
+            "--histogram-percentiles",
+            "0",
+            "empty",
+            "hist",
+        ])
+        .output()
+        .expect("binary start")
+}
+
+#[test]
+fn diff_histogram_difference_outside_i64_is_not_101() {
+    let one = diff_histogram("9223372036854775808", "latency:1|h|#host:a\n");
+    assert_ne!(one.status.code(), Some(101), "{}", failure(&one));
+    assert_eq!(one.status.code(), Some(0), "{}", failure(&one));
+    let one_out = String::from_utf8(one.stdout).expect("stdout is utf-8");
+    assert!(one_out.contains("old total: 0\n"), "{one_out}");
+    assert!(
+        one_out.contains("new total: 9223372036854775808\n"),
+        "{one_out}"
+    );
+    assert!(
+        one_out.contains("delta: 9223372036854775808\n"),
+        "{one_out}"
+    );
+
+    let two = diff_histogram(
+        "4611686018427387904",
+        "latency:1|h|#host:a\nlatency:1|h|#host:b\n",
+    );
+    assert_ne!(two.status.code(), Some(101), "{}", failure(&two));
+    assert_eq!(two.status.code(), Some(0), "{}", failure(&two));
+    let two_out = String::from_utf8(two.stdout).expect("stdout is utf-8");
+    assert!(two_out.contains("old total: 0\n"), "{two_out}");
+    assert!(
+        two_out.contains("new total: 9223372036854775808\n"),
+        "{two_out}"
+    );
+    assert!(
+        two_out.contains("delta: 9223372036854775808\n"),
+        "{two_out}"
+    );
+}
+
 #[test]
 fn usage_error_is_exit_3() {
     let one = binary()

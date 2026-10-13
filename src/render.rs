@@ -946,7 +946,7 @@ estimate: Datadog bills the hourly average over the month; this is one snapshot 
         kind: Kind,
         old_count: Option<u64>,
         new_count: u64,
-        delta: i64,
+        delta: i128,
         tags: Vec<TagDelta>,
     ) -> MetricDelta {
         MetricDelta {

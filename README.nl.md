@@ -135,7 +135,7 @@ dd-metric-bill past de regels van Datadog toe. De `host`-tag telt mee, een histo
 - Alleen count accepteert --explain, --plan, --hosts, --allow-tags, --prices en --unbounded-threshold. Bij `diff` geven ze exit 3 (`option does not apply to diff: <option>`), vóór het lezen van samples of het prijsbestand.
 - --hosts werkt alleen samen met --plan. --untyped-as werkt alleen samen met --format prometheus.
 - Er is geen `--show-values`-vlag. De uitvoer toont tag-sleutels en aantallen, niet de tagwaarden.
-- Een prijs heeft hoogstens 12 cijfers achter de komma (`MAX_SCALE`) en een teller van hoogstens 10^18 (`MAX_NUMERATOR`). Nullen aan het eind van het decimale deel vallen weg vóór die grens. Een prijs daarbuiten maakt het prijsbestand ongeldig (exit 2, melding "field is too large").
+- Een prijs wordt exact decimaal uit het JSON-getal gelezen, niet als een binaire zwevendekommawaarde. Een prijs heeft hoogstens 12 cijfers achter de komma (`MAX_SCALE`) en een teller van hoogstens 10^18 (`MAX_NUMERATOR`). Nullen aan het eind van het decimale deel vallen weg vóór die grens. Een prijs daarbuiten maakt het prijsbestand ongeldig (exit 2, melding "field is too large").
 
 ## Steunen
 

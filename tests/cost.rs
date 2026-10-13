@@ -306,3 +306,97 @@ fn price_file_with_utf8_bom_is_read() {
     let stdout = String::from_utf8(output.stdout).expect("stdout is utf-8");
     assert!(stdout.contains("price: TST per 100\n"), "{stdout}");
 }
+
+fn price_object(ingested: &str, indexed: Option<&str>) -> String {
+    let indexed = match indexed {
+        Some(value) => format!(r#","indexed_per_100":{value}"#),
+        None => String::new(),
+    };
+    format!(
+        r#"{{"currency":"TST","source":"source-test","date":"2026-01-02","ingested_per_100":{ingested}{indexed}}}"#
+    )
+}
+
+/// `--plan pro --hosts 0` makes the allotment 0, so the surplus is the count.
+fn count_priced(price_json: &str, sample: &str, extra: &[&str]) -> Output {
+    let price = TempFile::new(price_json);
+    let sample_file = TempFile::new(sample);
+    let mut args = vec![
+        "count".to_string(),
+        "--plan".to_string(),
+        "pro".to_string(),
+        "--hosts".to_string(),
+        "0".to_string(),
+        "--prices".to_string(),
+        price.as_str().to_string(),
+    ];
+    args.extend(extra.iter().copied().map(str::to_string));
+    args.push(sample_file.as_str().to_string());
+    binary().args(&args).output().expect("binary start")
+}
+
+#[test]
+fn indexed_price_900719925474099_01_is_exact() {
+    let output = count_priced(
+        &price_object("0", Some("900719925474099.01")),
+        "m:1|h\n",
+        &[
+            "--histogram-aggregates",
+            "100",
+            "--histogram-percentiles",
+            "0",
+        ],
+    );
+    assert_eq!(output.status.code(), Some(0), "{}", failure(&output));
+    let stdout = String::from_utf8(output.stdout).expect("stdout is utf-8");
+    assert!(
+        stdout.contains("cost indexed: 900719925474099.01 TST\n"),
+        "{stdout}"
+    );
+}
+
+#[test]
+fn ingested_price_123456_123456789012_surplus_50_is_exact() {
+    let output = count_priced(
+        &price_object("123456.123456789012", None),
+        "m:1|h|#host:a\n",
+        &[
+            "--allow-tags",
+            "host",
+            "--histogram-aggregates",
+            "50",
+            "--histogram-percentiles",
+            "0",
+        ],
+    );
+    assert_eq!(output.status.code(), Some(0), "{}", failure(&output));
+    let stdout = String::from_utf8(output.stdout).expect("stdout is utf-8");
+    assert!(
+        stdout.contains("cost ingested: 61728.061728394506 TST\n"),
+        "{stdout}"
+    );
+}
+
+#[test]
+fn prices_past_exact_decimal_limits_exit_2() {
+    let sample = manifest("tests/fixtures/b1-count.dogstatsd");
+    for number in ["1.00000000000000001", "1000000000000000000.1", "1e-400"] {
+        let price = TempFile::new(&price_object(number, None));
+        let output = binary()
+            .args(["count", "--prices", price.as_str(), &sample])
+            .output()
+            .expect("binary start");
+        assert_eq!(
+            output.status.code(),
+            Some(2),
+            "{number}\n{}",
+            failure(&output)
+        );
+        assert!(output.stdout.is_empty(), "{number}\n{}", failure(&output));
+        let stderr = String::from_utf8(output.stderr).expect("stderr is utf-8");
+        assert!(
+            stderr.contains("field is too large: ingested_per_100"),
+            "{number}\n{stderr}"
+        );
+    }
+}

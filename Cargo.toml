@@ -14,4 +14,6 @@ exclude = [".github/", ".gitattributes"]
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
-serde_json = "1"
+# arbitrary_precision keeps a JSON number as its decimal text. Price files
+# are read from that text; a binary float would round them.
+serde_json = { version = "1", features = ["arbitrary_precision"] }

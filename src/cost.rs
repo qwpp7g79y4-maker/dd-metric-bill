@@ -126,6 +126,11 @@ enum PriceNumberError {
 /// `indexed_per_100` may be absent. An unknown field, an empty text field,
 /// a negative price, or a price that does not fit the calculation is invalid.
 /// A UTF-8 BOM at the start is skipped, as in samples.
+///
+/// A price is the decimal text of the JSON number (not a binary float),
+/// stored as an `i128` numerator over `10^scale`. The cost stays in that
+/// integer form: usage above the allotment, times the numerator, divided
+/// by `10^(scale + 2)`.
 pub fn parse_prices(text: &str) -> Result<Prices, PriceError> {
     let text = crate::parse::without_bom(text);
     let value: Value = serde_json::from_str(text).map_err(|_| PriceError::new(Reason::Json))?;
@@ -236,6 +241,7 @@ fn require_price(obj: &Map<String, Value>, field: &'static str) -> Result<PriceP
     match obj.get(field) {
         None => Err(PriceError::new(Reason::Missing(field))),
         Some(Value::Number(number)) => {
+            // `arbitrary_precision` makes this the JSON lexical form.
             parse_price(&number.to_string()).map_err(|error| price_error(field, error))
         }
         Some(_) => Err(PriceError::new(Reason::NotNumber(field))),
