@@ -77,7 +77,7 @@ DogStatsD types: `c` count, `g` gauge, `h` histogram, `d` distribution, `ms` his
 
 **Diff.** Per metric name and kind: old count, new count, and delta. Metrics only in the new sample are listed under `new:`. Metrics only in the old sample are listed under `removed:`. Tag keys show old and new values and added series. `--budget` compares against the new total.
 
-**Overflow.** Nothing panics on user input. The messages name the cause and use `1 combination` or `N combinations`:
+**Overflow.** Nothing panics on user input or on a failed write. The messages name the cause and use `1 combination` or `N combinations`:
 
 - `allotment does not fit: the number of hosts times the metrics per host is too large`
 - `count does not fit: the sum of --histogram-aggregates A and --histogram-percentiles P is too large`
@@ -96,13 +96,15 @@ Every text report ends with `estimate: Datadog bills the hourly average over the
 
 **Prometheus text.** `# TYPE` sets the family. `counter` and `gauge` count as D3. `histogram` and `summary` follow D10, not the DogStatsD factor of 5. `# TYPE untyped`, or a sample with no `# TYPE`, counts as 0 and is shown as `skipped` (D11), unless `--untyped-as` is set. A `_count`, `_sum`, or `_bucket` name whose base is a counter or gauge is that separate untyped metric, not a histogram. Unknown types are an error. `# HELP` lines are ignored.
 
+A histogram or summary series that maps to the same name and kind as another sample counts once. The same tags are one combination. `latency_count` under `# TYPE latency histogram` and a counter `# TYPE latency.count counter` with the same labels are one count metric.
+
 A `_total` sample of a counter family counts as `name.count` (D12). The OpenMetrics page says: "counter names ending in `_total` must be specified without the `_total` suffix. For example, to collect `promhttp_metric_handler_requests_total`, specify the metric name `promhttp_metric_handler_requests`. This submits to Datadog the metric name appended with `.count`, `promhttp_metric_handler_requests.count`." (https://docs.datadoghq.com/integrations/openmetrics/, read 7 October 2026). `# TYPE a_total counter` with a sample named `a_total` stays the metric `a_total` (D3), because the type name matches the sample name exactly. A `_created` sample of a counter family does not count. What Datadog does with `_created` is not verified.
 
 A metric name may contain a dot, without quotes. https://prometheus.io/docs/concepts/data_model/ (read 9 October 2026) says "Metric names MAY use any UTF-8 characters." and "Metric names SHOULD match the regex `[a-zA-Z_:][a-zA-Z0-9_:]*` for the best experience and compatibility (see the warning below). Metric names outside of that set will require quoting e.g. when used in PromQL (see the UTF-8 guide)." The tool accepts a dot without quotes because Datadog names such as `request.Latency` appear in source B1. The characters the parser accepts in a name are letters, digits, `_`, `:`, and `.`.
 
 A label list may end with a comma. The exposition format writes `label_pairs = label_pair { "," label_pair } [ "," ]` (https://github.com/prometheus/docs/blob/main/docs/instrumenting/exposition_formats.md, read 8 October 2026). Spaces around `=` are accepted, for example `a{host = "x"} 1`. The EBNF on that page (read 9 October 2026) writes the label name, then `=`, then a quoted value, with no spaces. The same page says tokens may be separated by spaces or tabs. This tool accepts the spaces: milder than the grammar, never stricter.
 
-`+Inf` is a valid Prometheus value. A timestamp, when present, is an optional integer. A UTF-8 BOM at the start of a DogStatsD, JSONL, or Prometheus file is skipped. A BOM later in the file stays part of the text. Control characters in a metric name or tag key are printed as `\xNN` in text so they do not drive the terminal. JSON keeps the raw string.
+`+Inf` is a valid Prometheus value. A timestamp, when present, is an optional integer. A UTF-8 BOM at the start of a DogStatsD, JSONL, or Prometheus file is skipped. A BOM later in the file stays part of the text. Control characters in a metric name, a tag key, a price file's currency, source, or date, and a metric name in an error message are printed as `\xNN` in text and on stderr so they do not drive the terminal. JSON keeps the raw string.
 
 Number parsing goes through `serde_json` 1.0.151, which depends on `zmij` 1.0.23 by David Tolnay (MIT). That library has no network, file, or process access. Its build script runs `rustc --version` while compiling.
 
@@ -120,8 +122,10 @@ Each metric has `name`, `type`, `combinations`, `count`, `rule`, and `rule_text`
 | --- | --- |
 | 0 | The report was printed. With `--budget`, the total is not above N. |
 | 1 | `--budget` exceeded. Stdout still has the report. Stderr is `budget exceeded: TOTAL > LIMIT`. |
-| 2 | The sample or the price file cannot be read or is invalid. |
-| 3 | Usage error. Stdout is empty. |
+| 2 | The sample or the price file cannot be read or is invalid, or the report cannot be written. |
+| 3 | Usage error. Stdout is empty. `--help` and `--version` that cannot be written also exit 3. |
+
+When stdout cannot take the report, stderr is `could not write the report: REASON` and the exit code is 2. `--help` and `--version` that cannot be written exit 3, and stderr is `could not write the message: REASON`. A failed write does not panic.
 
 A sample and a price file must be regular files. `metadata` follows symlinks. A directory, FIFO, device, or other non-regular path is not opened, so a FIFO with no writer does not hang. The message is `cannot read sample: PATH: REASON` or `cannot read price file: PATH: REASON`, and `REASON` includes `not a regular file` when the path is not a regular file.
 

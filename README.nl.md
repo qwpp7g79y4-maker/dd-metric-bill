@@ -132,6 +132,8 @@ dd-metric-bill past de regels van Datadog toe. De `host`-tag telt mee, een histo
 - Een UTF-8 BOM aan het begin van een bestand wordt overgeslagen, in DogStatsD, JSONL en Prometheus. Dat is een keuze: de BOM hoort niet bij de metricnaam. Een BOM verderop in het bestand blijft staan.
 - Het `_created`-sample van een OpenMetrics-counter telt niet mee. Wat Datadog daarmee doet is niet geverifieerd.
 - Alleen gewone bestanden worden gelezen, als sample bij `count` en `diff` en als `--prices`. Een map, FIFO, device of ander niet-regulier pad wordt niet geopend.
+- Een Prometheus-histogram of -summary die op dezelfde naam en hetzelfde soort uitkomt als een ander sample telt één keer. Dezelfde tags zijn één combinatie. `latency_count` van een histogram `latency` en een counter `latency.count` met dezelfde labels zijn één metric.
+- Een verslag dat niet geschreven kan worden geeft exit 2 (`could not write the report: REASON`). Dat is geen succes en het geeft geen panic. `--help` en `--version` die niet geschreven kunnen worden geven exit 3. Stuurtekens in currency, source, date en in een metricnaam op een foutregel worden als `\xNN` getoond.
 - Alleen count accepteert --explain, --plan, --hosts, --allow-tags, --prices en --unbounded-threshold. Bij `diff` geven ze exit 3 (`option does not apply to diff: <option>`), vóór het lezen van samples of het prijsbestand.
 - --hosts werkt alleen samen met --plan. --untyped-as werkt alleen samen met --format prometheus.
 - Er is geen `--show-values`-vlag. De uitvoer toont tag-sleutels en aantallen, niet de tagwaarden.

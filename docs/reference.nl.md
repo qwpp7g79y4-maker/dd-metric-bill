@@ -79,7 +79,7 @@ DogStatsD-types: `c` count, `g` gauge, `h` histogram, `d` distribution, `ms` his
 
 **Diff.** Per metricnaam en soort: oude telling, nieuwe telling en delta. Metrics die alleen in het nieuwe sample zitten, staan onder `new:`. Metrics die alleen in het oude sample zitten, staan onder `removed:`. Tagsleutels tonen oude en nieuwe waarden en toegevoegde series. `--budget` vergelijkt met het nieuwe totaal.
 
-**Overloop.** Er is geen panic op gebruikersinvoer. De meldingen noemen de oorzaak en gebruiken `1 combination` of `N combinations`:
+**Overloop.** Er is geen panic op gebruikersinvoer of op een mislukte schrijfactie. De meldingen noemen de oorzaak en gebruiken `1 combination` of `N combinations`:
 
 - `allotment does not fit: the number of hosts times the metrics per host is too large`
 - `count does not fit: the sum of --histogram-aggregates A and --histogram-percentiles P is too large`
@@ -98,13 +98,15 @@ Elk tekstverslag eindigt met `estimate: Datadog bills the hourly average over th
 
 **Prometheus-tekst.** `# TYPE` zet de familie. `counter` en `gauge` tellen als D3. `histogram` en `summary` volgen D10, niet de DogStatsD-factor 5. `# TYPE untyped`, of een sample zonder `# TYPE`, telt als 0 en staat als `skipped` (D11), tenzij `--untyped-as` gezet is. Een `_count`-, `_sum`- of `_bucket`-naam waarvan de basis een counter of gauge is, is die aparte metric zonder type, geen histogram. Onbekende types zijn een fout. `# HELP`-regels worden genegeerd.
 
+Een histogram- of summary-serie die op dezelfde naam en hetzelfde soort uitkomt als een ander sample telt één keer. Dezelfde tags zijn één combinatie. `latency_count` onder `# TYPE latency histogram` en een counter `# TYPE latency.count counter` met dezelfde labels zijn één count-metric.
+
 Een `_total`-sample van een counter-familie telt als `name.count` (D12). De OpenMetrics-pagina zegt: "counter names ending in `_total` must be specified without the `_total` suffix. For example, to collect `promhttp_metric_handler_requests_total`, specify the metric name `promhttp_metric_handler_requests`. This submits to Datadog the metric name appended with `.count`, `promhttp_metric_handler_requests.count`." (https://docs.datadoghq.com/integrations/openmetrics/, gelezen 7 oktober 2026). `# TYPE a_total counter` met een sample `a_total` blijft de metric `a_total` (D3), omdat de typenaam exact de samplenaam is. Een `_created`-sample van een counter-familie telt niet mee. Wat Datadog met `_created` doet is niet geverifieerd.
 
 Een metricnaam mag een punt bevatten, zonder quotes. https://prometheus.io/docs/concepts/data_model/ (gelezen 9 oktober 2026) zegt "Metric names MAY use any UTF-8 characters." en "Metric names SHOULD match the regex `[a-zA-Z_:][a-zA-Z0-9_:]*` for the best experience and compatibility (see the warning below). Metric names outside of that set will require quoting e.g. when used in PromQL (see the UTF-8 guide)." De tool accepteert een punt zonder quotes, omdat Datadog-namen zoals `request.Latency` in bron B1 staan. De tekens die de parser in een naam accepteert zijn letters, cijfers, `_`, `:` en `.`.
 
 Een labellijst mag op een komma eindigen. Het exposition-formaat schrijft `label_pairs = label_pair { "," label_pair } [ "," ]` (https://github.com/prometheus/docs/blob/main/docs/instrumenting/exposition_formats.md, gelezen 8 oktober 2026). Spaties rond `=` worden geaccepteerd, bijvoorbeeld `a{host = "x"} 1`. De EBNF op die pagina (gelezen 9 oktober 2026) schrijft de labelnaam, dan `=`, dan een gequote waarde, zonder spaties. Dezelfde pagina zegt dat tokens door spaties of tabs gescheiden mogen worden. Deze tool accepteert de spaties: milder dan de grammatica, nooit strenger.
 
-`+Inf` is een geldige Prometheus-waarde. Een timestamp, als die er is, is een optioneel geheel getal. Een UTF-8 BOM aan het begin van een DogStatsD-, JSONL- of Prometheus-bestand wordt overgeslagen. Een BOM verderop in het bestand blijft deel van de tekst. Stuurtekens in een metricnaam of tagsleutel worden in tekst als `\xNN` getoond, zodat ze de terminal niet sturen. JSON houdt de ruwe string.
+`+Inf` is een geldige Prometheus-waarde. Een timestamp, als die er is, is een optioneel geheel getal. Een UTF-8 BOM aan het begin van een DogStatsD-, JSONL- of Prometheus-bestand wordt overgeslagen. Een BOM verderop in het bestand blijft deel van de tekst. Stuurtekens in een metricnaam, een tagsleutel, currency, source of date uit een prijsbestand, en een metricnaam in een foutmelding worden in tekst en op stderr als `\xNN` getoond, zodat ze de terminal niet sturen. JSON houdt de ruwe string.
 
 Getallen lopen via `serde_json` 1.0.151, dat afhangt van `zmij` 1.0.23 van David Tolnay (MIT). Die bibliotheek doet geen netwerk-, bestands- of procesaanroep. Het build-script draait `rustc --version` tijdens het compileren.
 
@@ -122,8 +124,10 @@ Elke metric heeft `name`, `type`, `combinations`, `count`, `rule` en `rule_text`
 | --- | --- |
 | 0 | Het verslag is geschreven. Met `--budget` ligt het totaal niet boven N. |
 | 1 | `--budget` overschreden. Stdout heeft nog steeds het verslag. Stderr is `budget exceeded: TOTAL > LIMIT`. |
-| 2 | Het sample of het prijsbestand kan niet gelezen worden of is ongeldig. |
-| 3 | Gebruiksfout. Stdout is leeg. |
+| 2 | Het sample of het prijsbestand kan niet gelezen worden of is ongeldig, of het verslag kan niet geschreven worden. |
+| 3 | Gebruiksfout. Stdout is leeg. `--help` en `--version` die niet geschreven kunnen worden geven ook exit 3. |
+
+Als stdout het verslag niet kan aannemen, is stderr `could not write the report: REASON` en de exitcode 2. `--help` en `--version` die niet geschreven kunnen worden geven exit 3, en stderr is `could not write the message: REASON`. Een mislukte schrijfactie geeft geen panic.
 
 Een sample en een prijsbestand moeten gewone bestanden zijn. `metadata` volgt symlinks. Een map, FIFO, device of ander niet-regulier pad wordt niet geopend, zodat een FIFO zonder schrijver niet blijft hangen. De melding is `cannot read sample: PATH: REASON` of `cannot read price file: PATH: REASON`, en `REASON` bevat `not a regular file` als het pad geen gewoon bestand is.
 

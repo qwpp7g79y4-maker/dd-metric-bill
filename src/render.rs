@@ -15,15 +15,7 @@ const TOOL: &str = "dd-metric-bill";
 /// Makes control characters visible, so they do not drive the terminal.
 /// JSON does not use this function: the raw string stays there.
 fn visible(text: &str) -> String {
-    let mut out = String::with_capacity(text.len());
-    for c in text.chars() {
-        if c.is_control() {
-            write!(out, "\\x{:02x}", u32::from(c)).expect("writing to a String does not fail");
-        } else {
-            out.push(c);
-        }
-    }
-    out
+    crate::count::visible_text(text)
 }
 
 /// Fixed line in every text output (D8). A sample is one snapshot.
@@ -449,16 +441,16 @@ fn write_allotment(out: &mut String, allotment: &Allotment) {
 }
 
 fn write_cost(out: &mut String, cost: &CostReport) {
-    writeln!(out, "price: {} per 100", cost.currency).expect("writing to a String does not fail");
-    writeln!(out, "source: {}", cost.source).expect("writing to a String does not fail");
-    writeln!(out, "date: {}", cost.date).expect("writing to a String does not fail");
+    let currency = visible(&cost.currency);
+    writeln!(out, "price: {currency} per 100").expect("writing to a String does not fail");
+    writeln!(out, "source: {}", visible(&cost.source)).expect("writing to a String does not fail");
+    writeln!(out, "date: {}", visible(&cost.date)).expect("writing to a String does not fail");
     for line in &cost.lines {
         writeln!(
             out,
             "cost {kind}: {amount} {currency}",
             kind = line.kind.label(),
             amount = line.amount,
-            currency = cost.currency,
         )
         .expect("writing to a String does not fail");
     }

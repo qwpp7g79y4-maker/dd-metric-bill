@@ -1,3 +1,4 @@
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
@@ -173,21 +174,40 @@ fn usage_exit(err: &clap::Error) -> u8 {
         _ => EXIT_USAGE,
     };
     if let Err(io_err) = err.print() {
-        eprintln!("could not write the message: {io_err}");
+        note(format_args!("could not write the message: {io_err}"));
+        return EXIT_USAGE;
     }
     code
+}
+
+/// Writes one stderr line. A full or closed stderr must not panic.
+fn note(args: std::fmt::Arguments<'_>) {
+    let mut err = io::stderr().lock();
+    let _ = writeln!(err, "{args}");
+}
+
+/// Writes the report to stdout. A failed write is exit 2 and does not panic.
+fn write_report(text: &str) -> u8 {
+    let mut out = io::stdout().lock();
+    match out.write_all(text.as_bytes()).and_then(|()| out.flush()) {
+        Ok(()) => EXIT_OK,
+        Err(err) => {
+            note(format_args!("could not write the report: {err}"));
+            EXIT_INPUT
+        }
+    }
 }
 
 fn run(cli: &Cli, threshold_explicit: bool) -> u8 {
     // Refuse diff options first, so `diff --hosts` keeps the diff message, even without `--plan`.
     if let Command::Diff { .. } = &cli.command {
         if let Some(option) = diff_forbidden_option(cli, threshold_explicit) {
-            eprintln!("option does not apply to diff: {option}");
+            note(format_args!("option does not apply to diff: {option}"));
             return EXIT_USAGE;
         }
     }
     if let Some(message) = combination_rejection(cli) {
-        eprintln!("{message}");
+        note(format_args!("{message}"));
         return EXIT_USAGE;
     }
     let prices = match cli.prices.as_deref() {
@@ -245,32 +265,29 @@ fn count_paths(cli: &Cli, paths: &[PathBuf], prices: Option<&Prices>) -> u8 {
             allow.indexed,
         )
     });
-    if cli.json {
-        print!(
-            "{}",
-            render_count_json(
-                paths,
-                &report,
-                allotment.as_ref(),
-                &tags,
-                &unbounded,
-                Some(&allow),
-                cost.as_ref(),
-            )
-        );
+    let rendered = if cli.json {
+        render_count_json(
+            paths,
+            &report,
+            allotment.as_ref(),
+            &tags,
+            &unbounded,
+            Some(&allow),
+            cost.as_ref(),
+        )
     } else {
-        print!(
-            "{}",
-            render_count(
-                &report,
-                cli.explain,
-                allotment.as_ref(),
-                &tags,
-                &unbounded,
-                Some(&allow),
-                cost.as_ref(),
-            )
-        );
+        render_count(
+            &report,
+            cli.explain,
+            allotment.as_ref(),
+            &tags,
+            &unbounded,
+            Some(&allow),
+            cost.as_ref(),
+        )
+    };
+    if write_report(&rendered) != EXIT_OK {
+        return EXIT_INPUT;
     }
     budget_status(cli.budget, report.total)
 }
@@ -329,23 +346,26 @@ fn diff_paths(cli: &Cli, old: &Path, new: &Path) -> u8 {
         Ok(report) => report,
         Err(err) => return usage_error(&err),
     };
-    if cli.json {
-        print!("{}", render_diff_json(old, new, &report));
+    let rendered = if cli.json {
+        render_diff_json(old, new, &report)
     } else {
-        print!("{}", render_diff(&report));
+        render_diff(&report)
+    };
+    if write_report(&rendered) != EXIT_OK {
+        return EXIT_INPUT;
     }
     budget_status(cli.budget, report.new_total)
 }
 
 fn usage_error(err: &CountError) -> u8 {
-    eprintln!("usage error: {err}");
+    note(format_args!("usage error: {err}"));
     EXIT_USAGE
 }
 
 fn budget_status(budget: Option<u64>, total: u64) -> u8 {
     match budget {
         Some(limit) if total > limit => {
-            eprintln!("budget exceeded: {total} > {limit}");
+            note(format_args!("budget exceeded: {total} > {limit}"));
             EXIT_BUDGET
         }
         _ => EXIT_OK,
@@ -357,7 +377,10 @@ fn read_prices(path: &Path) -> Result<Prices, u8> {
     match parse_prices(&text) {
         Ok(prices) => Ok(prices),
         Err(err) => {
-            eprintln!("invalid price file: {}: {err}", path.display());
+            note(format_args!(
+                "invalid price file: {}: {err}",
+                path.display()
+            ));
             Err(EXIT_INPUT)
         }
     }
@@ -397,7 +420,7 @@ fn read_samples(
             Ok(samples)
         }
         Err(err) => {
-            eprintln!("{err}");
+            note(format_args!("{err}"));
             Err(err.exit_code())
         }
     }
@@ -442,7 +465,10 @@ fn read_text(path: &Path, kind: &str) -> Result<String, u8> {
 }
 
 fn refuse_read(kind: &str, path: &Path, reason: impl std::fmt::Display) {
-    eprintln!("cannot read {kind}: {}: {reason}", path.display());
+    note(format_args!(
+        "cannot read {kind}: {}: {reason}",
+        path.display()
+    ));
 }
 
 fn parse_format(format: Format, text: &str) -> Result<Vec<Sample>, ParseError> {

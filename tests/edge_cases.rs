@@ -1,5 +1,7 @@
 //! Unusual input. Temporary files, no fixtures.
 
+#[cfg(target_os = "linux")]
+use std::path::Path;
 use std::path::PathBuf;
 use std::process::{Command, Output};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -481,5 +483,290 @@ fn utf16_and_utf32_never_show_tag_values() {
                 }
             }
         }
+    }
+}
+
+/// Histogram `latency_count` and counter `latency.count` with the same tags are one metric.
+const LATENCY_COLLISION: &str = "\
+# TYPE latency histogram
+latency_count{host=\"a\"} 1
+# TYPE latency.count counter
+latency.count{host=\"a\"} 1
+";
+
+#[test]
+fn prometheus_histogram_and_same_name_counter_count_once() {
+    let sample = TempPath::text(LATENCY_COLLISION);
+    let empty = TempPath::text("");
+    let count = run(&["count", "--format", "prometheus", sample.path()]);
+    assert_eq!(count.status.code(), Some(0), "{}", failure(&count));
+    let stdout = String::from_utf8(count.stdout).expect("stdout is utf-8");
+    assert!(stdout.contains("total: 1\n"), "{stdout}");
+    assert_eq!(
+        stdout
+            .lines()
+            .filter(|line| line.contains("latency.count"))
+            .count(),
+        1,
+        "{stdout}"
+    );
+
+    let count_json = run(&["count", "--format", "prometheus", "--json", sample.path()]);
+    assert_eq!(
+        count_json.status.code(),
+        Some(0),
+        "{}",
+        failure(&count_json)
+    );
+    let doc: serde_json::Value =
+        serde_json::from_slice(&count_json.stdout).expect("count json is valid");
+    assert_eq!(doc["total"].as_u64(), Some(1), "{doc}");
+
+    let diff = run(&[
+        "diff",
+        "--format",
+        "prometheus",
+        "--json",
+        empty.path(),
+        sample.path(),
+    ]);
+    assert_eq!(diff.status.code(), Some(0), "{}", failure(&diff));
+    let doc: serde_json::Value = serde_json::from_slice(&diff.stdout).expect("diff json is valid");
+    let total_delta = doc["total"]["delta"].as_i64().expect("total delta");
+    let metric_sum: i64 = doc["metrics"]
+        .as_array()
+        .expect("metrics")
+        .iter()
+        .map(|metric| metric["delta"].as_i64().expect("metric delta"))
+        .sum();
+    assert_eq!(total_delta, metric_sum, "{doc}");
+    assert_eq!(doc["total"]["new"].as_u64(), Some(1), "{doc}");
+    assert_eq!(total_delta, 1, "{doc}");
+}
+
+fn price_file(body: serde_json::Value) -> TempPath {
+    TempPath::text(&serde_json::to_string(&body).expect("price json"))
+}
+
+fn no_raw_control(bytes: &[u8], label: &str) {
+    assert!(
+        !bytes.contains(&0x1b),
+        "{label} contains a raw ESC: {:?}",
+        String::from_utf8_lossy(bytes)
+    );
+}
+
+/// Currency `T` + ESC + `[2JST`, plus source and date that also carry controls.
+#[test]
+fn price_currency_with_escape_is_visible_in_text_and_raw_in_json() {
+    let currency = "T\u{1b}[2JST";
+    let source = "S\u{1b}RC";
+    let date = "D\nATE";
+    let prices = price_file(serde_json::json!({
+        "currency": currency,
+        "source": source,
+        "date": date,
+        "ingested_per_100": 0,
+    }));
+    let sample = TempPath::text("a:1|c\n");
+    let text = run(&["count", "--prices", prices.path(), sample.path()]);
+    assert_eq!(text.status.code(), Some(0), "{}", failure(&text));
+    no_raw_control(&text.stdout, "stdout");
+    no_raw_control(&text.stderr, "stderr");
+    let stdout = String::from_utf8(text.stdout).expect("stdout is utf-8");
+    assert!(
+        stdout.contains("price: T\\x1b[2JST per 100\n"),
+        "{stdout:?}"
+    );
+    assert!(stdout.contains("source: S\\x1bRC\n"), "{stdout:?}");
+    assert!(stdout.contains("date: D\\x0aATE\n"), "{stdout:?}");
+    assert!(!stdout.lines().any(|line| line == "ATE"), "{stdout:?}");
+
+    let json = run(&["count", "--json", "--prices", prices.path(), sample.path()]);
+    assert_eq!(json.status.code(), Some(0), "{}", failure(&json));
+    no_raw_control(&json.stdout, "json stdout");
+    no_raw_control(&json.stderr, "json stderr");
+    let rendered = String::from_utf8(json.stdout.clone()).expect("json is utf-8");
+    assert!(
+        !rendered.contains("\\x1b"),
+        "json uses the text escape:\n{rendered}"
+    );
+    let doc: serde_json::Value = serde_json::from_slice(&json.stdout).expect("json is valid");
+    assert_eq!(doc["costs"]["currency"], currency, "{doc}");
+    assert_eq!(doc["costs"]["source"], source, "{doc}");
+    assert_eq!(doc["costs"]["date"], date, "{doc}");
+}
+
+/// Currency from the price file with a newline and ANSI text inside it.
+#[test]
+fn price_currency_with_newline_and_ansi_stays_one_line() {
+    let currency = "EUR\n\u{1b}[31mFAKE LINE: budget exceeded: 0 > 0\u{1b}[0m";
+    let prices = price_file(serde_json::json!({
+        "currency": currency,
+        "source": "https://example.invalid/prices",
+        "date": "2026-01-01",
+        "ingested_per_100": 0,
+    }));
+    let sample = TempPath::text("a:1|c\n");
+    let text = run(&["count", "--prices", prices.path(), sample.path()]);
+    assert_eq!(text.status.code(), Some(0), "{}", failure(&text));
+    no_raw_control(&text.stdout, "stdout");
+    no_raw_control(&text.stderr, "stderr");
+    let stdout = String::from_utf8(text.stdout).expect("stdout is utf-8");
+    let stderr = String::from_utf8(text.stderr).expect("stderr is utf-8");
+    assert!(
+        stdout.contains(
+            "price: EUR\\x0a\\x1b[31mFAKE LINE: budget exceeded: 0 > 0\\x1b[0m per 100\n"
+        ),
+        "{stdout:?}"
+    );
+    assert_eq!(
+        stdout
+            .lines()
+            .filter(|line| line.starts_with("price:"))
+            .count(),
+        1,
+        "{stdout:?}"
+    );
+    assert!(
+        !stdout
+            .lines()
+            .any(|line| line.contains("FAKE LINE") && !line.starts_with("price:")),
+        "{stdout:?}"
+    );
+    assert!(!stderr.contains("FAKE LINE"), "{stderr:?}");
+
+    let json = run(&["count", "--json", "--prices", prices.path(), sample.path()]);
+    assert_eq!(json.status.code(), Some(0), "{}", failure(&json));
+    no_raw_control(&json.stdout, "json stdout");
+    no_raw_control(&json.stderr, "json stderr");
+    let doc: serde_json::Value = serde_json::from_slice(&json.stdout).expect("json is valid");
+    assert_eq!(doc["costs"]["currency"], currency, "{doc}");
+}
+
+/// Metric `m` + ESC + `[2J` on a histogram whose factor overflows.
+#[test]
+fn histogram_overflow_escapes_the_metric_name_on_stderr() {
+    let name = "m\u{1b}[2J";
+    let sample = TempPath::text(&format!("{name}:1|h|#host:a\n{name}:1|h|#host:b\n"));
+    let output = run(&[
+        "--histogram-aggregates",
+        "9223372036854775808",
+        "--histogram-percentiles",
+        "0",
+        "count",
+        sample.path(),
+    ]);
+    assert_eq!(output.status.code(), Some(3), "{}", failure(&output));
+    no_raw_control(&output.stdout, "stdout");
+    no_raw_control(&output.stderr, "stderr");
+    let stderr = String::from_utf8(output.stderr).expect("stderr is utf-8");
+    assert_eq!(stderr.lines().count(), 1, "{stderr:?}");
+    assert!(
+        stderr.contains(
+            "metric m\\x1b[2J: factor 9223372036854775808 times 2 combinations is too large"
+        ),
+        "{stderr:?}"
+    );
+    assert!(
+        !stderr.lines().any(|line| line.starts_with("[2J")),
+        "{stderr:?}"
+    );
+}
+
+#[cfg(target_os = "linux")]
+struct TempDir(PathBuf);
+
+#[cfg(target_os = "linux")]
+impl TempDir {
+    fn new() -> Self {
+        let n = SERIAL.fetch_add(1, Ordering::Relaxed);
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos();
+        let path = std::env::temp_dir().join(format!("dd-metric-bill-test-edge-{nanos}-{n}"));
+        std::fs::create_dir(&path).expect("temp dir");
+        Self(path)
+    }
+
+    fn path(&self) -> &Path {
+        &self.0
+    }
+}
+
+#[cfg(target_os = "linux")]
+impl Drop for TempDir {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn dev_full() -> std::fs::File {
+    std::fs::OpenOptions::new()
+        .write(true)
+        .open("/dev/full")
+        .expect("open /dev/full")
+}
+
+#[cfg(target_os = "linux")]
+fn run_in(args: &[&str], dir: Option<&Path>, full_stdout: bool, full_stderr: bool) -> Output {
+    let mut cmd = binary();
+    cmd.args(args);
+    if let Some(dir) = dir {
+        cmd.current_dir(dir);
+    }
+    if full_stdout {
+        cmd.stdout(dev_full());
+    }
+    if full_stderr {
+        cmd.stderr(dev_full());
+    }
+    cmd.output().expect("binary start")
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn count_report_to_dev_full_is_not_success() {
+    let dir = TempDir::new();
+    std::fs::write(dir.path().join("count"), "a:1|c\n").expect("sample named count");
+    let output = run_in(&["count", "count"], Some(dir.path()), true, false);
+    let code = output.status.code();
+    assert_ne!(code, Some(101), "{}", failure(&output));
+    assert_ne!(code, Some(0), "{}", failure(&output));
+    assert_eq!(code, Some(2), "{}", failure(&output));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(!stderr.contains("panicked"), "{stderr}");
+    assert!(stderr.contains("could not write the report:"), "{stderr}");
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn missing_sample_with_stderr_dev_full_does_not_panic() {
+    let output = run_in(&["count", "/nope"], None, false, true);
+    let code = output.status.code();
+    assert_ne!(code, Some(101), "{}", failure(&output));
+    assert_ne!(code, Some(0), "{}", failure(&output));
+    assert_eq!(code, Some(2), "{}", failure(&output));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(!stderr.contains("panicked"), "{stderr}");
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn help_and_version_to_dev_full_are_not_success() {
+    for args in [&["--version"][..], &["--help"][..]] {
+        let output = run_in(args, None, true, false);
+        let code = output.status.code();
+        assert_ne!(code, Some(0), "{args:?}\n{}", failure(&output));
+        assert_ne!(code, Some(101), "{args:?}\n{}", failure(&output));
+        assert_eq!(code, Some(3), "{args:?}\n{}", failure(&output));
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(!stderr.contains("panicked"), "{args:?} {stderr}");
+        assert!(
+            stderr.contains("could not write the message:"),
+            "{args:?} {stderr}"
+        );
     }
 }

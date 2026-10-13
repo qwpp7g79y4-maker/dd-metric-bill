@@ -1,5 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet};
-use std::fmt;
+use std::fmt::{self, Write};
 
 use crate::parse::{Kind, Sample};
 
@@ -56,20 +56,26 @@ impl fmt::Display for CountError {
                 metric,
                 factor,
                 combinations,
-            } => write!(
-                f,
-                "count does not fit: metric {metric}: factor {factor} times {combinations} {word} is too large",
-                word = combinations_word(*combinations),
-            ),
+            } => {
+                let metric = visible_text(metric);
+                write!(
+                    f,
+                    "count does not fit: metric {metric}: factor {factor} times {combinations} {word} is too large",
+                    word = combinations_word(*combinations),
+                )
+            }
             CountError::Total {
                 metric,
                 factor,
                 combinations,
-            } => write!(
-                f,
-                "count does not fit: metric {metric}: factor {factor} times {combinations} {word} makes the total too large",
-                word = combinations_word(*combinations),
-            ),
+            } => {
+                let metric = visible_text(metric);
+                write!(
+                    f,
+                    "count does not fit: metric {metric}: factor {factor} times {combinations} {word} makes the total too large",
+                    word = combinations_word(*combinations),
+                )
+            }
         }
     }
 }
@@ -80,6 +86,20 @@ fn combinations_word(n: u64) -> &'static str {
     } else {
         "combinations"
     }
+}
+
+/// Control characters as `\xNN`, so a metric name or a price field does not drive the terminal.
+/// JSON does not use this function: the raw string stays there.
+pub(crate) fn visible_text(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    for ch in text.chars() {
+        if ch.is_control() {
+            write!(out, "\\x{:02x}", u32::from(ch)).expect("writing to a String does not fail");
+        } else {
+            out.push(ch);
+        }
+    }
+    out
 }
 
 impl std::error::Error for CountError {}
@@ -168,6 +188,10 @@ pub struct Allotment {
 struct Group {
     kind: Kind,
     combinations: BTreeSet<BTreeSet<TagPair>>,
+    /// True only when every sample in the group is a Prometheus histogram or summary.
+    all_d10: bool,
+    /// True only when every sample in the group is an OpenMetrics counter `_total`.
+    all_counter_total: bool,
 }
 
 /// Counts billable custom metrics for count and gauge (D1-D3).
@@ -230,6 +254,9 @@ pub fn count_histogram_distribution(
 /// A `_total` sample of an OpenMetrics counter (D12) counts 1 per combination
 /// on `name.count`.
 /// A Prometheus metric without a type (D11) counts 0.
+/// Samples that share a name and a kind are one metric. A histogram `_count`
+/// mapped to `name.count` and a counter already named `name.count` therefore
+/// count once: the same tags are one combination.
 /// Each metric gets the rule code, the rule text, and the source URL.
 /// Metrics are ordered by name, and for the same name by kind.
 ///
@@ -247,30 +274,30 @@ pub fn count_by_metric(
     histogram_percentiles: u64,
     percentiles: bool,
 ) -> Result<CountReport, CountError> {
-    let mut groups: BTreeMap<(String, u8, bool, bool), Group> = BTreeMap::new();
+    let mut groups: BTreeMap<(String, u8), Group> = BTreeMap::new();
     for sample in samples {
-        let key = (
-            sample.name.clone(),
-            kind_ord(sample.kind),
-            sample.d10,
-            sample.counter_total,
-        );
+        let key = (sample.name.clone(), kind_ord(sample.kind));
         let group = groups.entry(key).or_insert_with(|| Group {
             kind: sample.kind,
             combinations: BTreeSet::new(),
+            all_d10: true,
+            all_counter_total: true,
         });
+        // A mixed group is no longer a pure D10 or D12 series. The factor stays 1.
+        group.all_d10 &= sample.d10;
+        group.all_counter_total &= sample.counter_total;
         group.combinations.insert(tags_of(sample));
     }
 
     let mut metrics = Vec::with_capacity(groups.len());
     let mut total = 0u64;
-    for ((name, _, d10, counter_total), group) in groups {
+    for ((name, _), group) in groups {
         let combinations =
             u64::try_from(group.combinations.len()).expect("number of combinations fits in u64");
         let (factor, rule) = factor_and_rule(
             group.kind,
-            d10,
-            counter_total,
+            group.all_d10,
+            group.all_counter_total,
             histogram_aggregates,
             histogram_percentiles,
             percentiles,

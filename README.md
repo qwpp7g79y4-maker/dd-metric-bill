@@ -130,6 +130,8 @@ dd-metric-bill applies Datadog's rules. The `host` tag counts, a histogram or di
 - A UTF-8 BOM at the start of a file is skipped, in DogStatsD, JSONL, and Prometheus. That is a choice: the BOM does not belong to the metric name. A BOM later in the file stays.
 - The `_created` sample of an OpenMetrics counter does not count. What Datadog does with it is not verified.
 - Only regular files are read, as a sample for `count` and `diff` and as `--prices`. A directory, FIFO, device, or other non-regular path is not opened.
+- A Prometheus histogram or summary series that lands on the same name and kind as another sample counts once. The same tags are one combination. `latency_count` from a histogram `latency` and a counter named `latency.count` with the same labels are one metric.
+- A report that cannot be written exits 2 (`could not write the report: REASON`). That is not success, and it does not panic. `--help` and `--version` that cannot be written exit 3. Control characters in currency, source, date, and in a metric name on an error line are printed as `\xNN`.
 - Only count accepts --explain, --plan, --hosts, --allow-tags, --prices and --unbounded-threshold. On `diff` they exit 3 (`option does not apply to diff: <option>`), before samples or the price file are read.
 - --hosts only works together with --plan. --untyped-as only works together with --format prometheus.
 - There is no `--show-values` flag. The output shows tag keys and counts, not the tag values.
