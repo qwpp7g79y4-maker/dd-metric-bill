@@ -2,6 +2,25 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+## [0.1.2] - 2026-10-14
+
+### Fixed
+
+- Prices are read as exact decimals instead of through binary floating point. A price with more than 12 decimals, or out of range, is refused with exit 2.
+- `diff` no longer panics when a total does not fit in a signed 64-bit number.
+- A Prometheus histogram and a counter whose series names collide are counted once, and the `diff` total matches its per-metric deltas.
+- A write error, such as a full disk, is a clean error instead of a panic. `--help` and `--version` do not exit 0 when their output cannot be written.
+- Control characters in a price file's currency, source and date, and in metric names, are escaped in text output and on stderr.
+- A path that is swapped for a FIFO between the check and the read no longer makes the tool wait; the opened file itself is checked.
+- The quick start in the README works from the release archive.
+
+### Performance
+
+- Many repeated sample lines no longer grow memory without bound.
+- Lookups per metric use a map, so time grows linearly with the number of unique metric names instead of quadratically.
+
 ## [0.1.1] - 2026-10-11
 
 ### Changed
