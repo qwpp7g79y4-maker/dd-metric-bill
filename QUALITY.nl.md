@@ -2,6 +2,34 @@
 
 Deze pagina laat zien hoe elke release van dd-metric-bill is gecontroleerd, wat we vonden en wat we hebben opgelost. Het beschrijft onze controles. Het is geen garantie dat de software foutloos of veilig is.
 
+## v0.1.2
+
+| | |
+|---|---|
+| Versie | 0.1.2 ([release](https://github.com/qwpp7g79y4-maker/dd-metric-bill/releases/tag/v0.1.2), [crates.io](https://crates.io/crates/dd-metric-bill/0.1.2)) |
+| Gecontroleerde commit | [`5cf3997`](https://github.com/qwpp7g79y4-maker/dd-metric-bill/commit/5cf3997) |
+| Datum | 2026-10-14 |
+| Tests | 209 automatische tests, gedraaid in debug- en releasemodus |
+
+### Hoe we controleerden
+
+- Dezelfde controles als bij de vorige versie (hieronder), op elk platform.
+- Een tweede externe geautomatiseerde codereview. Elke bevinding die we konden reproduceren is in deze versie opgelost, elk met een regressietest met precies die invoer.
+- Geautomatiseerde tests in CI: [run 38539434541](https://github.com/qwpp7g79y4-maker/dd-metric-bill/actions/runs/38539434541) op Linux, Windows, macOS op Apple Silicon en Intel, en Rust 1.85, plus `cargo audit` (geen bekende kwetsbaarheden).
+
+### Wat we vonden en oplosten
+
+| Probleem | Oplossing |
+|---|---|
+| Prijzen gingen via binaire drijvende komma | Prijzen zijn exacte decimalen; meer dan 12 decimalen of buiten bereik geeft exit 2 |
+| `diff` kon een panic geven bij zeer grote totalen | Het geeft een nette foutmelding |
+| Een Prometheus-histogram en een counter met botsende seriesnamen werden dubbel geteld | Ze tellen één keer, en `diff`-totalen kloppen met de deltas per metric |
+| Een volle schijf gaf een panic, en `--help`/`--version` gaven exit 0 als de uitvoer mislukte | Nette foutmeldingen; een mislukte schrijfactie geeft nooit exit 0 |
+| Stuurtekens uit een prijsbestand of metricnamen kwamen rauw in de terminal | Ze worden ge-escaped in tekstuitvoer en op stderr |
+| Een pad dat door een FIFO werd vervangen kon de tool laten wachten; veel herhaalde regels lieten het geheugen groeien; de tijd groeide kwadratisch met het aantal unieke metricnamen | Het geopende bestand wordt gecontroleerd; geheugen is begrensd; zoeken is lineair |
+
+Alle fixes staan in de [changelog](https://github.com/qwpp7g79y4-maker/dd-metric-bill/blob/main/CHANGELOG.md).
+
 ## v0.1.1
 
 | | |
