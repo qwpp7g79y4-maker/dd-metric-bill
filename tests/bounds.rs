@@ -1,8 +1,9 @@
 //! Bounds for duplicate lines and for many metric names.
 //!
 //! The duplicate line is `requests:1|c|#env:test`. The name test is a smaller
-//! stand-in for 80_000 unique names: `render` and `diff` must not scan the
-//! metric list once per metric.
+//! scaling check: `render` and `diff` must not scan the metric list once per
+//! metric, so eight times the names must not take much more than eight times
+//! as long.
 
 use std::time::{Duration, Instant};
 
@@ -13,8 +14,8 @@ use dd_metric_bill::parse::{parse_dogstatsd, Kind, Sample, Tag};
 use dd_metric_bill::render::render_count;
 use dd_metric_bill::tags::{MetricTags, TagKey};
 
-const NAMES: usize = 40_000;
-const LIMIT: Duration = Duration::from_secs(2);
+const SMALL: usize = 2_500;
+const GROWTH: f64 = 24.0;
 
 fn rule() -> Rule {
     Rule {
@@ -24,13 +25,13 @@ fn rule() -> Rule {
     }
 }
 
-#[test]
-fn many_unique_metric_names_stay_fast() {
-    let mut metrics = Vec::with_capacity(NAMES);
-    let mut tags = Vec::with_capacity(NAMES);
-    let mut allow_metrics = Vec::with_capacity(NAMES);
-    let mut samples = Vec::with_capacity(NAMES);
-    for i in 0..NAMES {
+/// Time `render` and `diff` for `n` unique metric names.
+fn time_names(n: usize) -> (Duration, Duration) {
+    let mut metrics = Vec::with_capacity(n);
+    let mut tags = Vec::with_capacity(n);
+    let mut allow_metrics = Vec::with_capacity(n);
+    let mut samples = Vec::with_capacity(n);
+    for i in 0..n {
         let name = format!("m{i}");
         metrics.push(MetricCount {
             name: name.clone(),
@@ -66,36 +67,58 @@ fn many_unique_metric_names_stay_fast() {
         });
     }
     let report = CountReport {
-        total: NAMES as u64,
+        total: n as u64,
         metrics,
     };
     let allow = AllowReport {
         metrics: allow_metrics,
         ingested: None,
-        indexed: NAMES as u64,
+        indexed: n as u64,
     };
 
     let start = Instant::now();
     let text = render_count(&report, false, None, &tags, &[], Some(&allow), None);
-    let render_elapsed = start.elapsed();
+    let render = start.elapsed();
     assert!(
-        text.starts_with(&format!("total: {NAMES}\n")),
+        text.starts_with(&format!("total: {n}\n")),
         "total line changed"
-    );
-    assert!(
-        render_elapsed < LIMIT,
-        "render of {NAMES} names took {render_elapsed:?}, limit {LIMIT:?}"
     );
 
     let start = Instant::now();
     let diff = diff_samples(&samples, &samples, 4, 1, false, None).expect("diff");
-    let diff_elapsed = start.elapsed();
+    let diff_time = start.elapsed();
     assert_eq!(diff.delta, 0);
-    assert_eq!(diff.metrics.len(), NAMES);
-    assert!(
-        diff_elapsed < LIMIT,
-        "diff of {NAMES} names took {diff_elapsed:?}, limit {LIMIT:?}"
-    );
+    assert_eq!(diff.metrics.len(), n);
+    (render, diff_time)
+}
+
+/// Fastest of three runs, so one slow moment on a busy machine does not count.
+fn fastest(n: usize) -> (Duration, Duration) {
+    let mut best = time_names(n);
+    for _ in 0..2 {
+        let (render, diff) = time_names(n);
+        best = (best.0.min(render), best.1.min(diff));
+    }
+    best
+}
+
+#[test]
+fn many_unique_metric_names_stay_fast() {
+    // Eight times the names may take at most GROWTH times as long. Linear work
+    // gives about 8, a scan of the metric list per metric gives about 64. The
+    // ratio does not depend on how fast the machine is.
+    let small = fastest(SMALL);
+    let large = fastest(SMALL * 8);
+    let floor = Duration::from_millis(1);
+    for (what, s, l) in [("render", small.0, large.0), ("diff", small.1, large.1)] {
+        let ratio = l.as_secs_f64() / s.max(floor).as_secs_f64();
+        assert!(
+            ratio < GROWTH,
+            "{what}: {} names took {s:?}, {} names took {l:?}, growth {ratio:.1} (limit {GROWTH})",
+            SMALL,
+            SMALL * 8
+        );
+    }
 }
 
 #[test]
