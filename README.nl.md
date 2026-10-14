@@ -139,6 +139,7 @@ dd-metric-bill past de regels van Datadog toe. De `host`-tag telt mee, een histo
 - --hosts werkt alleen samen met --plan. --untyped-as werkt alleen samen met --format prometheus.
 - Er is geen `--show-values`-vlag. De uitvoer toont tag-sleutels en aantallen, niet de tagwaarden.
 - Een prijs wordt exact decimaal uit het JSON-getal gelezen, niet als een binaire zwevendekommawaarde. Een prijs heeft hoogstens 12 cijfers achter de komma (`MAX_SCALE`) en een teller van hoogstens 10^18 (`MAX_NUMERATOR`). Nullen aan het eind van het decimale deel vallen weg vóór die grens. Een prijs daarbuiten maakt het prijsbestand ongeldig (exit 2, melding "field is too large").
+- Een JSON-sleutel die in hetzelfde object twee keer voorkomt wordt geweigerd (exit 2). Een JSONL-waarde zegt `invalid jsonl line N: duplicate key`. Een prijsbestand zegt `price file has a duplicate key`. De melding bevat de ruwe tekst niet. Een `\uXXXX`-escape die na decoderen dezelfde sleutel is telt mee. Dezelfde naam in een geneste waarde telt niet.
 
 ## Steunen
 

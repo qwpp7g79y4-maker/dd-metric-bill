@@ -1,6 +1,9 @@
 mod dogstatsd;
+mod json_keys;
 mod jsonl;
 mod prometheus;
+
+pub(crate) use json_keys::repeats_top_level_key;
 
 use std::collections::HashSet;
 use std::fmt;

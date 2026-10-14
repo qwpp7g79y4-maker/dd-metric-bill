@@ -48,6 +48,8 @@ Prices come only from a JSON file you pass with `--prices`. The tool does not fe
 
 Required fields: `currency`, `source`, `date`, and `ingested_per_100`. `indexed_per_100` may be absent. Any other field makes the file invalid. `currency`, `source`, and `date` are text and must not be empty after trimming. A price is a JSON number. A comma (`0,10`) is not valid JSON.
 
+A key repeated at the top level is invalid (exit 2), including a `\uXXXX` escape that decodes to a key already present (`"currenc\u0079"` is `"currency"`). The message is `price file has a duplicate key` and does not include the file text. The same name inside a nested value is not a duplicate key.
+
 A price is read as an exact decimal from the JSON number, not as a binary floating-point value. A price has at most 12 digits after the decimal point (`MAX_SCALE`) and a numerator of at most 10^18 (`MAX_NUMERATOR`). Trailing zeros in the fractional part are dropped before that limit. A price outside it makes the price file invalid (exit 2, message "field is too large"). A negative price is rejected. The amount is whole-number arithmetic: metrics above the allotment, times the price per 100, divided by 100. The decimal point is `.`, and trailing zeros are not printed.
 
 Without `--plan` the file still prints currency, source, and date, and there is no cost line. With `--plan`, each configured volume is priced against the same allotment. Ingested is priced only when `--allow-tags` is set. Indexed is priced only when `indexed_per_100` is present. Usage below the allotment prints a cost of 0.
@@ -94,7 +96,7 @@ Every text report ends with `estimate: Datadog bills the hourly average over the
 
 **DogStatsD.** `name:value|type`, then optional `|@rate` and `|#tag:value,tag` in either order. A tag may have no value. Empty lines are skipped. A value that is not a finite number, including `NaN`, `Inf`, and `inf`, is invalid (exit 2). A very large finite value still counts: the value is not part of the bill.
 
-**JSON lines.** One object per line: `metric` (text), `type` (`count`, `gauge`, `histogram`, or `distribution`), and `tags` (a list of `key:value` or `key`). Other fields are ignored. Empty lines are ignored. A `value` that is valid JSON is ignored and does not change the count. `NaN`, `Inf`, and `inf` are not JSON, so the line is invalid (exit 2).
+**JSON lines.** One object per line: `metric` (text), `type` (`count`, `gauge`, `histogram`, or `distribution`), and `tags` (a list of `key:value` or `key`). Other fields are ignored. Empty lines are ignored. A `value` that is valid JSON is ignored and does not change the count. `NaN`, `Inf`, and `inf` are not JSON, so the line is invalid (exit 2). A key repeated in that object is invalid (exit 2). The message is `invalid jsonl line N: duplicate key`, where N is the first line of the value, and it does not include the value. A `\uXXXX` escape that decodes to a key already present counts, so `"typ\u0065"` is the same key as `"type"`. The same name inside a nested value is not a duplicate. Spaces, tabs, and line breaks between tokens are whitespace, and a value may span lines.
 
 **Prometheus text.** `# TYPE` sets the family. `counter` and `gauge` count as D3. `histogram` and `summary` follow D10, not the DogStatsD factor of 5. `# TYPE untyped`, or a sample with no `# TYPE`, counts as 0 and is shown as `skipped` (D11), unless `--untyped-as` is set. A `_count`, `_sum`, or `_bucket` name whose base is a counter or gauge is that separate untyped metric, not a histogram. Unknown types are an error. `# HELP` lines are ignored.
 
@@ -131,7 +133,7 @@ When stdout cannot take the report, stderr is `could not write the report: REASO
 
 A sample and a price file must be regular files. The path is opened without waiting, and only that opened file is read. A symlink is followed. A directory, FIFO, device, or other non-regular path is not read, so a FIFO with no writer does not hang. The type comes from the opened file, so a path that becomes a FIFO does not make the read wait. The message is `cannot read sample: PATH: REASON` or `cannot read price file: PATH: REASON`, and `REASON` includes `not a regular file` when the path is not a regular file.
 
-A price file that is not valid JSON, not an object, or has a bad field prints `invalid price file: PATH: DETAIL`. `DETAIL` is one of: `not valid json`, `not an object`, `missing field: FIELD`, `empty field: FIELD`, `field is not text: FIELD`, `field is not a number: FIELD`, `field is negative: FIELD`, `field is too large: FIELD`, `unknown field`.
+A price file that is not valid JSON, not an object, or has a bad field prints `invalid price file: PATH: DETAIL`. `DETAIL` is one of: `not valid json`, `not an object`, `missing field: FIELD`, `empty field: FIELD`, `field is not text: FIELD`, `field is not a number: FIELD`, `field is negative: FIELD`, `field is too large: FIELD`, `unknown field`. A key repeated at the top level prints `price file has a duplicate key` and nothing else: no path and no file text.
 
 A bad sample names the format and the 1-based line number, never the line itself:
 
@@ -149,6 +151,7 @@ A bad sample names the format and the 1-based line number, never the line itself
 - `invalid jsonl line N: type is missing or unknown`
 - `invalid jsonl line N: tag is missing or invalid`
 - `invalid jsonl line N: host has more than one value`
+- `invalid jsonl line N: duplicate key`
 - `invalid prometheus line N: shape is wrong`
 - `invalid prometheus line N: name is missing or invalid`
 - `invalid prometheus line N: type is missing or unknown`

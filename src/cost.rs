@@ -87,11 +87,17 @@ enum Reason {
     Negative(&'static str),
     TooLarge(&'static str),
     Unknown,
+    DuplicateKey,
 }
 
 impl PriceError {
     fn new(reason: Reason) -> Self {
         Self { reason }
+    }
+
+    #[must_use]
+    pub fn is_duplicate_key(&self) -> bool {
+        matches!(self.reason, Reason::DuplicateKey)
     }
 }
 
@@ -107,6 +113,7 @@ impl fmt::Display for PriceError {
             Reason::Negative(field) => write!(f, "field is negative: {field}"),
             Reason::TooLarge(field) => write!(f, "field is too large: {field}"),
             Reason::Unknown => f.write_str("unknown field"),
+            Reason::DuplicateKey => f.write_str("price file has a duplicate key"),
         }
     }
 }
@@ -131,12 +138,19 @@ enum PriceNumberError {
 /// stored as an `i128` numerator over `10^scale`. The cost stays in that
 /// integer form: usage above the allotment, times the numerator, divided
 /// by `10^(scale + 2)`.
+///
+/// A key repeated at the top level is invalid. The message does not include
+/// the file text. A `\uXXXX` escape that decodes to a key already present
+/// counts. The same name inside a nested value does not.
 pub fn parse_prices(text: &str) -> Result<Prices, PriceError> {
     let text = crate::parse::without_bom(text);
     let value: Value = serde_json::from_str(text).map_err(|_| PriceError::new(Reason::Json))?;
     let Value::Object(obj) = value else {
         return Err(PriceError::new(Reason::NotObject));
     };
+    if crate::parse::repeats_top_level_key(text, obj.len()) {
+        return Err(PriceError::new(Reason::DuplicateKey));
+    }
     let currency = require_text(&obj, "currency")?;
     let source = require_text(&obj, "source")?;
     let date = require_text(&obj, "date")?;
@@ -591,6 +605,16 @@ mod tests {
             (
                 "unknown-field",
                 format!("{{{valid},\"extra\":1}}"),
+                "unknown field",
+            ),
+            (
+                "duplicate-currency",
+                "{\"currency\":\"AAA\",\"currency\":\"BBB\",\"source\":\"s\",\"date\":\"2026-10-07\",\"ingested_per_100\":1}".to_string(),
+                "price file has a duplicate key",
+            ),
+            (
+                "nested-repeat",
+                "{\"currency\":\"AAA\",\"source\":\"s\",\"date\":\"2026-10-07\",\"ingested_per_100\":1,\"extra\":{\"currency\":\"BBB\",\"currency\":\"CCC\"}}".to_string(),
                 "unknown field",
             ),
         ];

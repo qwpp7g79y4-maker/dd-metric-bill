@@ -377,6 +377,10 @@ fn read_prices(path: &Path) -> Result<Prices, u8> {
     let text = read_text(path, "price file")?;
     match parse_prices(&text) {
         Ok(prices) => Ok(prices),
+        Err(err) if err.is_duplicate_key() => {
+            note(format_args!("{err}"));
+            Err(EXIT_INPUT)
+        }
         Err(err) => {
             note(format_args!(
                 "invalid price file: {}: {err}",

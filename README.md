@@ -137,6 +137,7 @@ dd-metric-bill applies Datadog's rules. The `host` tag counts, a histogram or di
 - --hosts only works together with --plan. --untyped-as only works together with --format prometheus.
 - There is no `--show-values` flag. The output shows tag keys and counts, not the tag values.
 - A price is read as an exact decimal from the JSON number, not as a binary floating-point value. A price has at most 12 digits after the decimal point (`MAX_SCALE`) and a numerator of at most 10^18 (`MAX_NUMERATOR`). Trailing zeros in the fractional part are dropped before that limit. A price outside it makes the price file invalid (exit 2, message "field is too large").
+- A JSON key repeated in the same object is rejected (exit 2). A JSONL value says `invalid jsonl line N: duplicate key`. A price file says `price file has a duplicate key`. The message does not include the raw text. A `\uXXXX` escape that decodes to the same key counts. The same name inside a nested value does not.
 
 ## Support
 

@@ -48,6 +48,8 @@ Prijzen komen alleen uit een JSON-bestand dat je met `--prices` meegeeft. De too
 
 Verplichte velden: `currency`, `source`, `date` en `ingested_per_100`. `indexed_per_100` mag ontbreken. Elk ander veld maakt het bestand ongeldig. `currency`, `source` en `date` zijn tekst en mogen na trimmen niet leeg zijn. Een prijs is een JSON-getal. Een komma (`0,10`) is geen geldige JSON.
 
+Een sleutel die op het hoogste niveau twee keer voorkomt is ongeldig (exit 2), ook een `\uXXXX`-escape die na decoderen een al aanwezige sleutel is (`"currenc\u0079"` is `"currency"`). De melding is `price file has a duplicate key` en bevat de tekst van het bestand niet. Dezelfde naam in een geneste waarde is geen dubbele sleutel.
+
 Een prijs wordt exact decimaal uit het JSON-getal gelezen, niet als een binaire zwevendekommawaarde. Een prijs heeft hoogstens 12 cijfers achter de komma (`MAX_SCALE`) en een teller van hoogstens 10^18 (`MAX_NUMERATOR`). Nullen aan het eind van het decimale deel vallen weg vóór die grens. Een prijs daarbuiten maakt het prijsbestand ongeldig (exit 2, melding "field is too large"). Een negatieve prijs wordt geweigerd. Het bedrag is geheeltallige rekenkunde: metrics boven de allotment, maal de prijs per 100, gedeeld door 100. Het decimaalteken is `.`, en nullen aan het eind worden niet getoond.
 
 Zonder `--plan` toont het bestand wel valuta, bron en datum, en is er geen kostenregel. Met `--plan` wordt elk ingesteld volume tegen dezelfde allotment gezet. Ingested wordt alleen geprijsd als `--allow-tags` gezet is. Indexed wordt alleen geprijsd als `indexed_per_100` aanwezig is. Gebruik onder de allotment geeft een kost van 0.
@@ -96,7 +98,7 @@ Elk tekstverslag eindigt met `estimate: Datadog bills the hourly average over th
 
 **DogStatsD.** `name:value|type`, daarna optioneel `|@rate` en `|#tag:value,tag` in beide volgordes. Een tag mag geen waarde hebben. Lege regels worden overgeslagen. Een waarde die geen eindig getal is, inclusief `NaN`, `Inf` en `inf`, is ongeldig (exit 2). Een heel groot eindig getal telt nog steeds: de waarde hoort niet bij de rekening.
 
-**JSON-regels.** Eén object per regel: `metric` (tekst), `type` (`count`, `gauge`, `histogram` of `distribution`) en `tags` (een lijst van `key:value` of `key`). Andere velden worden genegeerd. Lege regels worden genegeerd. Een `value` die geldige JSON is, wordt genegeerd en verandert de telling niet. `NaN`, `Inf` en `inf` zijn geen JSON, dus de regel is ongeldig (exit 2).
+**JSON-regels.** Eén object per regel: `metric` (tekst), `type` (`count`, `gauge`, `histogram` of `distribution`) en `tags` (een lijst van `key:value` of `key`). Andere velden worden genegeerd. Lege regels worden genegeerd. Een `value` die geldige JSON is, wordt genegeerd en verandert de telling niet. `NaN`, `Inf` en `inf` zijn geen JSON, dus de regel is ongeldig (exit 2). Een sleutel die in dat object twee keer voorkomt is ongeldig (exit 2). De melding is `invalid jsonl line N: duplicate key`, waarbij N de eerste regel van de waarde is, en de waarde zit er niet in. Een `\uXXXX`-escape die na decoderen een al aanwezige sleutel is telt mee, dus `"typ\u0065"` is dezelfde sleutel als `"type"`. Dezelfde naam in een geneste waarde is geen dubbel. Spaties, tabs en regeleinden tussen tokens zijn witruimte, en een waarde mag over regels lopen.
 
 **Prometheus-tekst.** `# TYPE` zet de familie. `counter` en `gauge` tellen als D3. `histogram` en `summary` volgen D10, niet de DogStatsD-factor 5. `# TYPE untyped`, of een sample zonder `# TYPE`, telt als 0 en staat als `skipped` (D11), tenzij `--untyped-as` gezet is. Een `_count`-, `_sum`- of `_bucket`-naam waarvan de basis een counter of gauge is, is die aparte metric zonder type, geen histogram. Onbekende types zijn een fout. `# HELP`-regels worden genegeerd.
 
@@ -133,7 +135,7 @@ Als stdout het verslag niet kan aannemen, is stderr `could not write the report:
 
 Een sample en een prijsbestand moeten gewone bestanden zijn. Het pad wordt geopend zonder te wachten, en alleen dat geopende bestand wordt gelezen. Een symlink wordt gevolgd. Een map, FIFO, device of ander niet-regulier pad wordt niet gelezen, zodat een FIFO zonder schrijver niet blijft hangen. Het type komt van het geopende bestand, zodat een pad dat een FIFO wordt het lezen niet laat wachten. De melding is `cannot read sample: PATH: REASON` of `cannot read price file: PATH: REASON`, en `REASON` bevat `not a regular file` als het pad geen gewoon bestand is.
 
-Een prijsbestand dat geen geldige JSON is, geen object is, of een slecht veld heeft, schrijft `invalid price file: PATH: DETAIL`. `DETAIL` is een van: `not valid json`, `not an object`, `missing field: FIELD`, `empty field: FIELD`, `field is not text: FIELD`, `field is not a number: FIELD`, `field is negative: FIELD`, `field is too large: FIELD`, `unknown field`.
+Een prijsbestand dat geen geldige JSON is, geen object is, of een slecht veld heeft, schrijft `invalid price file: PATH: DETAIL`. `DETAIL` is een van: `not valid json`, `not an object`, `missing field: FIELD`, `empty field: FIELD`, `field is not text: FIELD`, `field is not a number: FIELD`, `field is negative: FIELD`, `field is too large: FIELD`, `unknown field`. Een sleutel die op het hoogste niveau twee keer voorkomt schrijft alleen `price file has a duplicate key`: geen pad en geen tekst uit het bestand.
 
 Een slecht sample noemt het formaat en het regelnummer vanaf 1, nooit de regel zelf:
 
@@ -151,6 +153,7 @@ Een slecht sample noemt het formaat en het regelnummer vanaf 1, nooit de regel z
 - `invalid jsonl line N: type is missing or unknown`
 - `invalid jsonl line N: tag is missing or invalid`
 - `invalid jsonl line N: host has more than one value`
+- `invalid jsonl line N: duplicate key`
 - `invalid prometheus line N: shape is wrong`
 - `invalid prometheus line N: name is missing or invalid`
 - `invalid prometheus line N: type is missing or unknown`
