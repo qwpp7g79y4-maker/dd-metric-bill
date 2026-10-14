@@ -27,7 +27,7 @@ Run `dd-metric-bill --help` or `dd-metric-bill count --help` for the built-in he
 | `--unbounded-threshold` | count | A tag key with more than N distinct values is unbounded. Default 50. On `diff`, passing the flag is rejected even when the value is 50. |
 | `--untyped-as` | count and diff, only with `--format prometheus` | Count a Prometheus metric that has no type as `gauge` or `count`. |
 | `--help` | everywhere | Show help and exit 0. |
-| `--version` | top level | Show the version (`dd-metric-bill 0.1.0`) and exit 0. |
+| `--version` | top level | Show the version (`dd-metric-bill 0.1.2`) and exit 0. |
 
 Only count accepts --explain, --plan, --hosts, --allow-tags, --prices and --unbounded-threshold. --hosts only works together with --plan. --untyped-as only works together with --format prometheus.
 
@@ -71,6 +71,8 @@ DogStatsD types: `c` count, `g` gauge, `h` histogram, `d` distribution, `ms` his
 
 **Allotment.** Pro is 100 per host, Enterprise is 200 per host (B1, Allocation). Hosts come from `--hosts` or from the distinct `host` values in the sample. Without an allowlist the usage is the total, which is indexed, and the text says `usage: N (total, indexed)`. With an allowlist, indexed and ingested are each set against the allotment. Surplus is 0 when usage is not above the allotment.
 
+**One host per line.** Hosts are the distinct values of the key `host`. The key `HOST` is a different key. One line may carry one value of `host`. Two different values on that line are invalid (exit 2). DogStatsD: `m:1|c|#host:a,host:b`. JSON lines: `"tags":["host:a","host:b"]`. Prometheus: `{host="a",host="b"}`. The reason is `host has more than one value`. The message names the format and the line number. The same value twice (`host:a,host:a`) is one host. Other keys may repeat on one line, as Datadog allows. Spaces around a tag are ignored, and the order of the two host values does not matter.
+
 **Tags.** Per key: how many distinct values it has, and how many series disappear when that key is removed (`added`). `--top N` keeps the N keys with the largest `added`. Keys sort by `added`, then by number of values, then by name.
 
 **Unbounded.** A key is unbounded when it has more distinct values than `--unbounded-threshold`, or when a value matches a pattern: a UUID (`8-4-4-4-12` hex), a hex id of at least 16 hex digits with at least one letter a-f, a numeric id of at least 6 digits, or a pod name `name-hash-hash` whose hash parts are at least 5 alphanumeric characters. Reasons in the output are `threshold`, `pattern uuid`, `pattern hex-id`, `pattern numeric-id`, and `pattern pod-name`. The values themselves are not printed. Status codes such as `200` are shorter than 6 digits, so they are not a numeric id.
@@ -90,9 +92,9 @@ Every text report ends with `estimate: Datadog bills the hourly average over the
 
 ## Input formats
 
-**DogStatsD.** `name:value|type`, then optional `|@rate` and `|#tag:value,tag` in either order. A tag may have no value. Empty lines are skipped. A value that is not a finite number, including `NaN` and `Inf`, is invalid (exit 2). A very large finite value still counts: the value is not part of the bill.
+**DogStatsD.** `name:value|type`, then optional `|@rate` and `|#tag:value,tag` in either order. A tag may have no value. Empty lines are skipped. A value that is not a finite number, including `NaN`, `Inf`, and `inf`, is invalid (exit 2). A very large finite value still counts: the value is not part of the bill.
 
-**JSON lines.** One object per line: `metric` (text), `type` (`count`, `gauge`, `histogram`, or `distribution`), and `tags` (a list of `key:value` or `key`). Other fields are ignored. Empty lines are ignored.
+**JSON lines.** One object per line: `metric` (text), `type` (`count`, `gauge`, `histogram`, or `distribution`), and `tags` (a list of `key:value` or `key`). Other fields are ignored. Empty lines are ignored. A `value` that is valid JSON is ignored and does not change the count. `NaN`, `Inf`, and `inf` are not JSON, so the line is invalid (exit 2).
 
 **Prometheus text.** `# TYPE` sets the family. `counter` and `gauge` count as D3. `histogram` and `summary` follow D10, not the DogStatsD factor of 5. `# TYPE untyped`, or a sample with no `# TYPE`, counts as 0 and is shown as `skipped` (D11), unless `--untyped-as` is set. A `_count`, `_sum`, or `_bucket` name whose base is a counter or gauge is that separate untyped metric, not a histogram. Unknown types are an error. `# HELP` lines are ignored.
 
@@ -104,7 +106,7 @@ A metric name may contain a dot, without quotes. https://prometheus.io/docs/conc
 
 A label list may end with a comma. The exposition format writes `label_pairs = label_pair { "," label_pair } [ "," ]` (https://github.com/prometheus/docs/blob/main/docs/instrumenting/exposition_formats.md, read 8 October 2026). Spaces around `=` are accepted, for example `a{host = "x"} 1`. The EBNF on that page (read 9 October 2026) writes the label name, then `=`, then a quoted value, with no spaces. The same page says tokens may be separated by spaces or tabs. This tool accepts the spaces: milder than the grammar, never stricter.
 
-`+Inf` is a valid Prometheus value. A timestamp, when present, is an optional integer. A UTF-8 BOM at the start of a DogStatsD, JSONL, or Prometheus file is skipped. A BOM later in the file stays part of the text. Control characters in a metric name, a tag key, a price file's currency, source, or date, and a metric name in an error message are printed as `\xNN` in text and on stderr so they do not drive the terminal. JSON keeps the raw string.
+`NaN`, `+Inf`, `-Inf`, `Inf`, and `inf` are accepted. The series counts; the value is not part of the bill. A timestamp, when present, is an optional integer. A UTF-8 BOM at the start of a DogStatsD, JSONL, or Prometheus file is skipped. A BOM later in the file stays part of the text. Control characters in a metric name, a tag key, a price file's currency, source, or date, and a metric name in an error message are printed as `\xNN` in text and on stderr so they do not drive the terminal. JSON keeps the raw string.
 
 Number parsing goes through `serde_json` 1.0.151, which depends on `zmij` 1.0.23 by David Tolnay (MIT). That library has no network, file, or process access. Its build script runs `rustc --version` while compiling.
 
@@ -140,11 +142,13 @@ A bad sample names the format and the 1-based line number, never the line itself
 - `invalid dogstatsd line N: sample rate is missing or invalid`
 - `invalid dogstatsd line N: tag is missing or invalid`
 - `invalid dogstatsd line N: unknown field`
+- `invalid dogstatsd line N: host has more than one value`
 - `invalid jsonl line N: not valid json`
 - `invalid jsonl line N: shape is wrong`
 - `invalid jsonl line N: name is missing`
 - `invalid jsonl line N: type is missing or unknown`
 - `invalid jsonl line N: tag is missing or invalid`
+- `invalid jsonl line N: host has more than one value`
 - `invalid prometheus line N: shape is wrong`
 - `invalid prometheus line N: name is missing or invalid`
 - `invalid prometheus line N: type is missing or unknown`
@@ -152,6 +156,7 @@ A bad sample names the format and the 1-based line number, never the line itself
 - `invalid prometheus line N: label is missing or invalid`
 - `invalid prometheus line N: value is missing or invalid`
 - `invalid prometheus line N: histogram sample is missing _bucket, _sum or _count`
+- `invalid prometheus line N: host has more than one value`
 
 On `diff`, forbidden options are checked in this order: `--explain`, `--plan`, `--hosts`, `--allow-tags`, `--prices`, `--unbounded-threshold`. The first one wins, so `--explain` wins over a later flag. `--json` does not change the message. An invalid value is reported by the argument parser before that check.
 

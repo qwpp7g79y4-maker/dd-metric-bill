@@ -113,7 +113,7 @@ Prijzen komen alleen uit een JSON-bestand dat je met `--prices` meegeeft; zie [h
 
 ## Hoe het rekent
 
-Een custom metric is één combinatie van metricnaam en tagwaarden, inclusief `host`. De pagina van Datadog zegt `Reordering tag values doesn't add uniqueness` (https://docs.datadoghq.com/account_management/billing/custom_metrics, gelezen 7 oktober 2026). COUNT, RATE en GAUGE zijn 1 per combinatie. Een histogram is standaard 5 per combinatie (4 aggregaties plus `95percentile`), een distribution is 5, of 10 met percentielen. `--allow-tags endpoint,status` op het count-sample hierboven is ingested 4 en indexed 3; op het distribution-sample is het ingested 20 en indexed 15. De volledige regels, de Prometheus-mapping en de allotment staan in de [referentie](docs/reference.nl.md).
+Een custom metric is één combinatie van metricnaam en tagwaarden, inclusief `host`. De pagina van Datadog zegt `Reordering tag values doesn't add uniqueness` (https://docs.datadoghq.com/account_management/billing/custom_metrics, gelezen 7 oktober 2026). COUNT, RATE en GAUGE zijn 1 per combinatie. Een histogram is standaard 5 per combinatie (4 aggregaties plus `95percentile`), een distribution is 5, of 10 met percentielen. `--allow-tags endpoint,status` op het count-sample hierboven is ingested 4 en indexed 3; op het distribution-sample is het ingested 20 en indexed 15. Eén regel met twee verschillende `host`-waarden wordt geweigerd; dezelfde waarde twee keer is één host. De volledige regels, de Prometheus-mapping en de allotment staan in de [referentie](docs/reference.nl.md).
 
 ## Vergelijking met alternatieven
 
@@ -128,6 +128,7 @@ dd-metric-bill past de regels van Datadog toe. De `host`-tag telt mee, een histo
 - Geen verbinding met Datadog. Er is geen API-key en geen live usage. Volledig offline: geen netwerk, geen telemetrie.
 - De allowlist geldt voor alle metrics tegelijk. In Datadog is de allowlist per metric.
 - Zonder `--hosts` wordt het aantal hosts afgeleid uit de `host`-tag. Datadog rekent met betaalde hosts.
+- Eén regel mag één waarde van de sleutel `host` hebben. Twee verschillende waarden op die regel (`m:1|c|#host:a,host:b`, JSON `"tags":["host:a","host:b"]`, Prometheus `{host="a",host="b"}`) geven exit 2 met `host has more than one value`. De melding noemt het formaat en het regelnummer. Dezelfde waarde twee keer (`host:a,host:a`) is één host. Andere sleutels mogen herhaald worden. `HOST` is een andere sleutel.
 - Alleen de "Latest Version"-mapping wordt gevolgd. De mapping komt uit B2 (Mapping Prometheus Metrics to Datadog Metrics, https://docs.datadoghq.com/integrations/guide/prometheus-metrics/, gelezen 7 oktober 2026). Het overslaan van untyped komt uit B3 (Datadog, OpenMetrics, sectie Missing untyped metrics, https://docs.datadoghq.com/integrations/openmetrics/, gelezen 7 oktober 2026): "By default, the integration skips metrics that come without a type on a Prometheus exposition." Dat is het standaardgedrag van de OpenMetrics-check van de Datadog Agent.
 - Een UTF-8 BOM aan het begin van een bestand wordt overgeslagen, in DogStatsD, JSONL en Prometheus. Dat is een keuze: de BOM hoort niet bij de metricnaam. Een BOM verderop in het bestand blijft staan.
 - Het `_created`-sample van een OpenMetrics-counter telt niet mee. Wat Datadog daarmee doet is niet geverifieerd.

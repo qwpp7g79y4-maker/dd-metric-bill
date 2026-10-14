@@ -111,7 +111,7 @@ Prices come only from a JSON file you pass with `--prices`; see [the price file 
 
 ## How it counts
 
-A custom metric is one combination of metric name and tag values, including `host`. Datadog's page says `Reordering tag values doesn't add uniqueness` (https://docs.datadoghq.com/account_management/billing/custom_metrics, read 7 October 2026). COUNT, RATE, and GAUGE are 1 per combination. A histogram is 5 per combination by default (4 aggregates plus `95percentile`), and a distribution is 5, or 10 with percentiles. `--allow-tags endpoint,status` on the count sample above is ingested 4 and indexed 3; on the distribution sample it is ingested 20 and indexed 15. The full rules, the Prometheus mapping, and the allotment are in the [reference](docs/reference.md).
+A custom metric is one combination of metric name and tag values, including `host`. Datadog's page says `Reordering tag values doesn't add uniqueness` (https://docs.datadoghq.com/account_management/billing/custom_metrics, read 7 October 2026). COUNT, RATE, and GAUGE are 1 per combination. A histogram is 5 per combination by default (4 aggregates plus `95percentile`), and a distribution is 5, or 10 with percentiles. `--allow-tags endpoint,status` on the count sample above is ingested 4 and indexed 3; on the distribution sample it is ingested 20 and indexed 15. One line with two different `host` values is rejected; the same value twice is one host. The full rules, the Prometheus mapping, and the allotment are in the [reference](docs/reference.md).
 
 ## Compared with alternatives
 
@@ -126,6 +126,7 @@ dd-metric-bill applies Datadog's rules. The `host` tag counts, a histogram or di
 - No connection to Datadog. There is no API key and no live usage. Fully offline: no network, no telemetry.
 - The allowlist applies to all metrics at once. In Datadog the allowlist is per metric.
 - Without `--hosts` the host count is derived from the `host` tag. Datadog counts paid hosts.
+- One line may carry one value of the key `host`. Two different values on that line (`m:1|c|#host:a,host:b`, JSON `"tags":["host:a","host:b"]`, Prometheus `{host="a",host="b"}`) exit 2 with `host has more than one value`. The message names the format and the line number. The same value twice (`host:a,host:a`) is one host. Other keys may repeat. `HOST` is a different key.
 - Only the "Latest Version" mapping is followed. The mapping comes from B2 (Mapping Prometheus Metrics to Datadog Metrics, https://docs.datadoghq.com/integrations/guide/prometheus-metrics/, read 7 October 2026). Skipping untyped metrics comes from B3 (Datadog, OpenMetrics, section Missing untyped metrics, https://docs.datadoghq.com/integrations/openmetrics/, read 7 October 2026): "By default, the integration skips metrics that come without a type on a Prometheus exposition." That is the default behavior of the Datadog Agent OpenMetrics check.
 - A UTF-8 BOM at the start of a file is skipped, in DogStatsD, JSONL, and Prometheus. That is a choice: the BOM does not belong to the metric name. A BOM later in the file stays.
 - The `_created` sample of an OpenMetrics counter does not count. What Datadog does with it is not verified.

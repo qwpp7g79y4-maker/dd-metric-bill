@@ -57,6 +57,8 @@ impl Wire {
 /// A tag may have no value (`|#env`). `ms` counts as histogram, `s` as gauge.
 /// Empty lines are skipped. A UTF-8 BOM at the start is skipped too.
 /// An identical line is kept once: a repeated line does not add a sample.
+/// Two different values of `host` on one line are an error. The same value
+/// twice is one host. Other keys may repeat.
 pub fn parse_dogstatsd(input: &str) -> Result<Vec<Sample>, ParseError> {
     let input = super::without_bom(input);
     let mut samples = Vec::new();
@@ -84,6 +86,9 @@ fn parse_line(line: &str, line_no: usize) -> Result<Sample, ParseError> {
     let wire = parse_wire(type_token).map_err(|reason| fail(line_no, reason))?;
     check_value(wire, value).map_err(|reason| fail(line_no, reason))?;
     let tags = parse_tail(parts, line_no)?;
+    if super::conflicting_host(&tags) {
+        return Err(ParseError::new("dogstatsd", line_no, super::HOST_CONFLICT));
+    }
     Ok(Sample {
         name: name.to_string(),
         kind: wire.kind(),

@@ -770,3 +770,60 @@ fn help_and_version_to_dev_full_are_not_success() {
         );
     }
 }
+
+/// DogStatsD refuses `NaN`, `Inf`, and `inf`. Prometheus accepts them and
+/// counts the series; the number is not part of the bill. JSONL has no such
+/// token, so the line is not valid JSON.
+#[test]
+fn nan_inf_and_inf_per_format() {
+    for line in [
+        "a:NaN|c\n",
+        "a:Inf|c\n",
+        "a:inf|c\n",
+        "a:+Inf|c\n",
+        "a:-Inf|c\n",
+    ] {
+        let path = TempPath::text(line);
+        let output = run(&["count", "--format", "dogstatsd", path.path()]);
+        assert_eq!(output.status.code(), Some(2), "{line}{}", failure(&output));
+        assert!(output.stdout.is_empty(), "{line}{}", failure(&output));
+        let stderr = String::from_utf8(output.stderr).expect("stderr is utf-8");
+        assert_eq!(
+            stderr, "invalid dogstatsd line 1: value is missing or invalid\n",
+            "{line}"
+        );
+        assert!(!stderr.contains(line.trim()), "{stderr}");
+    }
+
+    let finite = TempPath::text("# TYPE a gauge\na 1\n");
+    let base = stdout_of(&["count", "--format", "prometheus", finite.path()]);
+    assert!(base.contains("total: 1\n"), "{base}");
+    for value in ["NaN", "+Inf", "-Inf", "Inf", "inf"] {
+        let path = TempPath::text(&format!("# TYPE a gauge\na {value}\n"));
+        let stdout = stdout_of(&["count", "--format", "prometheus", path.path()]);
+        assert_eq!(stdout, base, "{value}");
+        assert!(!stdout.contains(value), "{value}\n{stdout}");
+    }
+
+    for (token, marker) in [
+        ("NaN", "canary-nan"),
+        ("Inf", "canary-inf"),
+        ("inf", "canary-inf2"),
+    ] {
+        let path = TempPath::text(&format!(
+            "{{\"metric\":\"{marker}\",\"type\":\"count\",\"value\":{token}}}\n"
+        ));
+        let output = run(&["count", "--format", "jsonl", path.path()]);
+        assert_eq!(
+            output.status.code(),
+            Some(2),
+            "{token} {}",
+            failure(&output)
+        );
+        assert!(output.stdout.is_empty(), "{token} {}", failure(&output));
+        let stderr = String::from_utf8(output.stderr).expect("stderr is utf-8");
+        assert_eq!(stderr, "invalid jsonl line 1: not valid json\n", "{token}");
+        assert!(!stderr.contains(marker), "{stderr}");
+        assert!(!stderr.contains(token), "{stderr}");
+    }
+}

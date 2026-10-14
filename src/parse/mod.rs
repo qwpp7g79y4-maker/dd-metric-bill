@@ -115,9 +115,35 @@ pub struct Tag {
     pub value: Option<String>,
 }
 
+/// One line carried two different values of the key `host`.
+pub(crate) const HOST_CONFLICT: &str = "host has more than one value";
+
+/// `true` when `tags` has two or more different values for the key `host`.
+///
+/// The key is `host`. `HOST` is a different key. A tag with no value does not
+/// count. The same value twice is one host. Other keys may repeat.
+pub(crate) fn conflicting_host(tags: &[Tag]) -> bool {
+    let mut first: Option<&str> = None;
+    for tag in tags.iter().filter(|tag| tag.key == "host") {
+        let Some(value) = tag.value.as_deref() else {
+            continue;
+        };
+        if let Some(seen) = first {
+            if seen != value {
+                return true;
+            }
+        } else {
+            first = Some(value);
+        }
+    }
+    false
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{parse_dogstatsd, parse_jsonl, parse_prometheus, Kind, Sample};
+    use super::{
+        parse_dogstatsd, parse_jsonl, parse_prometheus, Kind, ParseError, Sample, HOST_CONFLICT,
+    };
     use crate::count::{
         count_by_metric, DEFAULT_HISTOGRAM_AGGREGATES, DEFAULT_HISTOGRAM_PERCENTILES,
     };
@@ -248,5 +274,52 @@ request.Latency_count{host=\"B\",endpoint=\"Y\",status=\"200\"} 1
             ]
         );
         assert_eq!(prom.total, 13);
+    }
+
+    /// One line with two different `host` values is rejected in every format.
+    /// The message names the format and the line, never the line text.
+    #[test]
+    fn two_host_values_on_one_line_are_rejected() {
+        assert_host_conflict("dogstatsd", "m:1|c|#host:a,host:b\n", parse_dogstatsd);
+        assert_host_conflict(
+            "jsonl",
+            "{\"metric\":\"m\",\"type\":\"count\",\"tags\":[\"host:a\",\"host:b\"]}\n",
+            parse_jsonl,
+        );
+        assert_host_conflict(
+            "prometheus",
+            "m{host=\"a\",host=\"b\"} 1\n",
+            parse_prometheus,
+        );
+    }
+
+    fn assert_host_conflict(
+        format: &str,
+        input: &str,
+        parse: fn(&str) -> Result<Vec<Sample>, ParseError>,
+    ) {
+        let err = parse(input).expect_err(format);
+        assert_eq!(err.exit_code(), 2, "{format}");
+        assert_eq!(err.line(), 1, "{format}");
+        assert_eq!(
+            err.to_string(),
+            format!("invalid {format} line 1: {HOST_CONFLICT}"),
+            "{format}"
+        );
+        for line in input.lines().map(str::trim).filter(|line| !line.is_empty()) {
+            assert!(
+                !err.to_string().contains(line),
+                "{format} message contains the line {line:?}: {err}"
+            );
+        }
+    }
+
+    #[test]
+    fn repeated_host_is_one_host_and_other_keys_may_repeat() {
+        let samples = parse_dogstatsd("m:1|c|#host:a,host:a\n").expect("same host");
+        assert_eq!(crate::count::unique_hosts(&samples), 1);
+        let samples = parse_dogstatsd("m:1|c|#env:a,env:b,host:a\n").expect("other keys");
+        assert_eq!(samples[0].tags.len(), 3);
+        assert_eq!(crate::count::unique_hosts(&samples), 1);
     }
 }

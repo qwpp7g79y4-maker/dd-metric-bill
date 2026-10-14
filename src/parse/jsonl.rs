@@ -33,6 +33,8 @@ fn fail(line: usize, reason: Fail) -> ParseError {
 /// Other fields, such as a value, are ignored. Empty lines are ignored too.
 /// A UTF-8 BOM at the start is skipped.
 /// An identical line is kept once: a repeated line does not add a sample.
+/// Two different values of `host` on one line are an error. The same value
+/// twice is one host. Other keys may repeat.
 pub fn parse_jsonl(input: &str) -> Result<Vec<Sample>, ParseError> {
     let input = super::without_bom(input);
     let mut samples = Vec::new();
@@ -69,6 +71,9 @@ fn parse_line(line: &str, line_no: usize) -> Result<Sample, ParseError> {
         None => return Err(fail(line_no, Fail::Type)),
     };
     let tags = tags_of(obj.get("tags"), line_no)?;
+    if super::conflicting_host(&tags) {
+        return Err(ParseError::new("jsonl", line_no, super::HOST_CONFLICT));
+    }
     Ok(Sample {
         name,
         kind,

@@ -80,6 +80,8 @@ fn fail(line: usize, reason: Fail) -> ParseError {
 /// `quantile`). A metric name may contain a dot. `# TYPE` comes before the samples.
 /// A UTF-8 BOM at the start is skipped.
 /// An identical sample line is kept once: a repeated line does not add a sample.
+/// Two different values of `host` on one line are an error. The same value
+/// twice is one host. Other label names may repeat.
 pub fn parse_prometheus(input: &str) -> Result<Vec<Sample>, ParseError> {
     let input = super::without_bom(input);
     let mut types: BTreeMap<String, Family> = BTreeMap::new();
@@ -106,6 +108,9 @@ pub fn parse_prometheus(input: &str) -> Result<Vec<Sample>, ParseError> {
             continue;
         }
         let (name, tags) = parse_sample(line).map_err(|reason| fail(line_no, reason))?;
+        if super::conflicting_host(&tags) {
+            return Err(ParseError::new("prometheus", line_no, super::HOST_CONFLICT));
+        }
         let mapped = resolve(&name, &types).map_err(|reason| fail(line_no, reason))?;
         if let Some(sample) = to_sample(mapped, tags) {
             samples.push(sample);

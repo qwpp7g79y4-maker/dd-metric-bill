@@ -27,7 +27,7 @@ De tekst die de binary schrijft is Engels. De voorbeelden en de foutmeldingen hi
 | `--unbounded-threshold` | count | Een tagsleutel met meer dan N verschillende waarden is onbegrensd. Standaard 50. Bij `diff` wordt de vlag geweigerd, ook als de waarde 50 is. |
 | `--untyped-as` | count en diff, alleen met `--format prometheus` | Een Prometheus-metric zonder type telt als `gauge` of `count`. |
 | `--help` | overal | Toon hulp en exitcode 0. |
-| `--version` | bovenaan | Toon de versie (`dd-metric-bill 0.1.0`) en exitcode 0. |
+| `--version` | bovenaan | Toon de versie (`dd-metric-bill 0.1.2`) en exitcode 0. |
 
 Alleen count accepteert --explain, --plan, --hosts, --allow-tags, --prices en --unbounded-threshold. --hosts werkt alleen samen met --plan. --untyped-as werkt alleen samen met --format prometheus.
 
@@ -73,6 +73,8 @@ DogStatsD-types: `c` count, `g` gauge, `h` histogram, `d` distribution, `ms` his
 
 **Allotment.** Pro is 100 per host, Enterprise is 200 per host (B1, Allocation). Hosts komen uit `--hosts` of uit de verschillende `host`-waarden in het sample. Zonder allowlist is het gebruik het totaal, en dat is indexed; de tekst zegt `usage: N (total, indexed)`. Met een allowlist worden indexed en ingested elk apart tegen de allotment gezet. Het overschot is 0 als het gebruik niet boven de allotment ligt.
 
+**Eén host per regel.** Hosts zijn de verschillende waarden van de sleutel `host`. De sleutel `HOST` is een andere sleutel. Eén regel mag één waarde van `host` hebben. Twee verschillende waarden op die regel zijn ongeldig (exit 2). DogStatsD: `m:1|c|#host:a,host:b`. JSON-regels: `"tags":["host:a","host:b"]`. Prometheus: `{host="a",host="b"}`. De reden is `host has more than one value`. De melding noemt het formaat en het regelnummer. Dezelfde waarde twee keer (`host:a,host:a`) is één host. Andere sleutels mogen op één regel herhaald worden, zoals Datadog dat toestaat. Spaties rond een tag tellen niet, en de volgorde van de twee hostwaarden maakt niet uit.
+
 **Tags.** Per sleutel: hoeveel verschillende waarden hij heeft, en hoeveel series verdwijnen als die sleutel wegvalt (`added`). `--top N` houdt de N sleutels met de grootste `added`. Sleutels sorteren op `added`, dan op het aantal waarden, dan op de naam.
 
 **Onbegrensd.** Een sleutel is onbegrensd als hij meer verschillende waarden heeft dan `--unbounded-threshold`, of als een waarde op een patroon lijkt: een UUID (`8-4-4-4-12` hex), een hex-id van minstens 16 hex-tekens met minstens één letter a-f, een numerieke id van minstens 6 cijfers, of een podnaam `name-hash-hash` waarvan de hash-delen minstens 5 alfanumerieke tekens zijn. Redenen in de uitvoer zijn `threshold`, `pattern uuid`, `pattern hex-id`, `pattern numeric-id` en `pattern pod-name`. De waarden zelf worden niet getoond. Statuscodes zoals `200` zijn korter dan 6 cijfers en zijn dus geen numerieke id.
@@ -92,9 +94,9 @@ Elk tekstverslag eindigt met `estimate: Datadog bills the hourly average over th
 
 ## Invoerformaten
 
-**DogStatsD.** `name:value|type`, daarna optioneel `|@rate` en `|#tag:value,tag` in beide volgordes. Een tag mag geen waarde hebben. Lege regels worden overgeslagen. Een waarde die geen eindig getal is, inclusief `NaN` en `Inf`, is ongeldig (exit 2). Een heel groot eindig getal telt nog steeds: de waarde hoort niet bij de rekening.
+**DogStatsD.** `name:value|type`, daarna optioneel `|@rate` en `|#tag:value,tag` in beide volgordes. Een tag mag geen waarde hebben. Lege regels worden overgeslagen. Een waarde die geen eindig getal is, inclusief `NaN`, `Inf` en `inf`, is ongeldig (exit 2). Een heel groot eindig getal telt nog steeds: de waarde hoort niet bij de rekening.
 
-**JSON-regels.** Eén object per regel: `metric` (tekst), `type` (`count`, `gauge`, `histogram` of `distribution`) en `tags` (een lijst van `key:value` of `key`). Andere velden worden genegeerd. Lege regels worden genegeerd.
+**JSON-regels.** Eén object per regel: `metric` (tekst), `type` (`count`, `gauge`, `histogram` of `distribution`) en `tags` (een lijst van `key:value` of `key`). Andere velden worden genegeerd. Lege regels worden genegeerd. Een `value` die geldige JSON is, wordt genegeerd en verandert de telling niet. `NaN`, `Inf` en `inf` zijn geen JSON, dus de regel is ongeldig (exit 2).
 
 **Prometheus-tekst.** `# TYPE` zet de familie. `counter` en `gauge` tellen als D3. `histogram` en `summary` volgen D10, niet de DogStatsD-factor 5. `# TYPE untyped`, of een sample zonder `# TYPE`, telt als 0 en staat als `skipped` (D11), tenzij `--untyped-as` gezet is. Een `_count`-, `_sum`- of `_bucket`-naam waarvan de basis een counter of gauge is, is die aparte metric zonder type, geen histogram. Onbekende types zijn een fout. `# HELP`-regels worden genegeerd.
 
@@ -106,7 +108,7 @@ Een metricnaam mag een punt bevatten, zonder quotes. https://prometheus.io/docs/
 
 Een labellijst mag op een komma eindigen. Het exposition-formaat schrijft `label_pairs = label_pair { "," label_pair } [ "," ]` (https://github.com/prometheus/docs/blob/main/docs/instrumenting/exposition_formats.md, gelezen 8 oktober 2026). Spaties rond `=` worden geaccepteerd, bijvoorbeeld `a{host = "x"} 1`. De EBNF op die pagina (gelezen 9 oktober 2026) schrijft de labelnaam, dan `=`, dan een gequote waarde, zonder spaties. Dezelfde pagina zegt dat tokens door spaties of tabs gescheiden mogen worden. Deze tool accepteert de spaties: milder dan de grammatica, nooit strenger.
 
-`+Inf` is een geldige Prometheus-waarde. Een timestamp, als die er is, is een optioneel geheel getal. Een UTF-8 BOM aan het begin van een DogStatsD-, JSONL- of Prometheus-bestand wordt overgeslagen. Een BOM verderop in het bestand blijft deel van de tekst. Stuurtekens in een metricnaam, een tagsleutel, currency, source of date uit een prijsbestand, en een metricnaam in een foutmelding worden in tekst en op stderr als `\xNN` getoond, zodat ze de terminal niet sturen. JSON houdt de ruwe string.
+`NaN`, `+Inf`, `-Inf`, `Inf` en `inf` worden geaccepteerd. De serie telt; de waarde hoort niet bij de rekening. Een timestamp, als die er is, is een optioneel geheel getal. Een UTF-8 BOM aan het begin van een DogStatsD-, JSONL- of Prometheus-bestand wordt overgeslagen. Een BOM verderop in het bestand blijft deel van de tekst. Stuurtekens in een metricnaam, een tagsleutel, currency, source of date uit een prijsbestand, en een metricnaam in een foutmelding worden in tekst en op stderr als `\xNN` getoond, zodat ze de terminal niet sturen. JSON houdt de ruwe string.
 
 Getallen lopen via `serde_json` 1.0.151, dat afhangt van `zmij` 1.0.23 van David Tolnay (MIT). Die bibliotheek doet geen netwerk-, bestands- of procesaanroep. Het build-script draait `rustc --version` tijdens het compileren.
 
@@ -142,11 +144,13 @@ Een slecht sample noemt het formaat en het regelnummer vanaf 1, nooit de regel z
 - `invalid dogstatsd line N: sample rate is missing or invalid`
 - `invalid dogstatsd line N: tag is missing or invalid`
 - `invalid dogstatsd line N: unknown field`
+- `invalid dogstatsd line N: host has more than one value`
 - `invalid jsonl line N: not valid json`
 - `invalid jsonl line N: shape is wrong`
 - `invalid jsonl line N: name is missing`
 - `invalid jsonl line N: type is missing or unknown`
 - `invalid jsonl line N: tag is missing or invalid`
+- `invalid jsonl line N: host has more than one value`
 - `invalid prometheus line N: shape is wrong`
 - `invalid prometheus line N: name is missing or invalid`
 - `invalid prometheus line N: type is missing or unknown`
@@ -154,6 +158,7 @@ Een slecht sample noemt het formaat en het regelnummer vanaf 1, nooit de regel z
 - `invalid prometheus line N: label is missing or invalid`
 - `invalid prometheus line N: value is missing or invalid`
 - `invalid prometheus line N: histogram sample is missing _bucket, _sum or _count`
+- `invalid prometheus line N: host has more than one value`
 
 Bij `diff` worden verboden opties in deze volgorde gecontroleerd: `--explain`, `--plan`, `--hosts`, `--allow-tags`, `--prices`, `--unbounded-threshold`. De eerste wint, dus `--explain` wint van een latere vlag. `--json` verandert de melding niet. Een ongeldige waarde meldt de argumentparser vóór die controle.
 

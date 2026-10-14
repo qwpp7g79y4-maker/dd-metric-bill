@@ -494,3 +494,200 @@ fn fixture_readme_describes_every_file_as_synthetic() {
         "fixture README does not say the files were written by hand"
     );
 }
+
+#[test]
+fn reference_version_matches_the_package() {
+    let expected = format!("dd-metric-bill {}", env!("CARGO_PKG_VERSION"));
+    for rel in [REF, REF_NL] {
+        assert_eq!(version_example(&read(rel)), expected, "{rel}");
+    }
+}
+
+fn version_example(text: &str) -> String {
+    let marker = "dd-metric-bill ";
+    let mut rest = text;
+    while let Some(index) = rest.find(marker) {
+        let after = &rest[index + marker.len()..];
+        let token = after
+            .split(|c: char| !c.is_ascii_digit() && c != '.')
+            .next()
+            .unwrap_or("");
+        if token.chars().next().is_some_and(|c| c.is_ascii_digit()) {
+            return format!("dd-metric-bill {token}");
+        }
+        rest = &rest[index + marker.len()..];
+    }
+    panic!("missing version example");
+}
+
+#[test]
+fn reference_states_nan_inf_per_format() {
+    let en = read(REF);
+    let nl = read(REF_NL);
+    assert!(en.contains("including `NaN`, `Inf`, and `inf`, is invalid (exit 2)"));
+    assert!(en.contains("`NaN`, `Inf`, and `inf` are not JSON, so the line is invalid (exit 2)"));
+    assert!(en.contains(
+        "`NaN`, `+Inf`, `-Inf`, `Inf`, and `inf` are accepted. The series counts; the value is not part of the bill."
+    ));
+    assert!(nl.contains("inclusief `NaN`, `Inf` en `inf`, is ongeldig (exit 2)"));
+    assert!(nl.contains("`NaN`, `Inf` en `inf` zijn geen JSON, dus de regel is ongeldig (exit 2)"));
+    assert!(nl.contains(
+        "`NaN`, `+Inf`, `-Inf`, `Inf` en `inf` worden geaccepteerd. De serie telt; de waarde hoort niet bij de rekening."
+    ));
+}
+
+#[test]
+fn readme_and_reference_describe_one_host_per_line() {
+    for rel in [README, README_NL, REF, REF_NL] {
+        let text = read(rel);
+        assert!(
+            text.contains("host has more than one value"),
+            "{rel} does not describe the host conflict"
+        );
+        assert!(text.contains("host:a,host:a"), "{rel}");
+        assert!(text.contains("m:1|c|#host:a,host:b"), "{rel}");
+        assert!(text.contains("\"tags\":[\"host:a\",\"host:b\"]"), "{rel}");
+        assert!(text.contains("{host=\"a\",host=\"b\"}"), "{rel}");
+    }
+}
+
+/// Every relative link in the README pages and in docs/ is copied into the
+/// release archive. `prices/datadog-example.json` is copied with that directory.
+#[test]
+fn release_archive_ships_linked_paths() {
+    let release = read(".github/workflows/release.yml");
+    let (files, trees) = cp_sources(&release);
+    let mut links = Vec::new();
+    for rel in doc_pages() {
+        for link in markdown_links(&read(&rel)) {
+            let Some(path) = link_path(&link) else {
+                continue;
+            };
+            links.push(resolve_link(&rel, path));
+        }
+    }
+    assert!(links.iter().any(|path| path == "SECURITY.md"), "{links:?}");
+    assert!(links.len() >= 6, "{links:?}");
+    for path in &links {
+        let abs = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(path);
+        assert!(abs.is_file(), "{path} is linked but missing");
+        assert!(
+            ships(&files, &trees, path),
+            "release.yml does not ship {path}\nfiles: {files:?}\ntrees: {trees:?}"
+        );
+    }
+    assert!(
+        ships(&files, &trees, "prices/datadog-example.json"),
+        "release.yml does not ship prices/datadog-example.json\n{files:?} {trees:?}"
+    );
+}
+
+fn doc_pages() -> Vec<String> {
+    let mut pages = vec!["README.md".to_string(), "README.nl.md".to_string()];
+    let docs = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("docs");
+    for entry in fs::read_dir(docs).expect("docs") {
+        let entry = entry.expect("docs entry");
+        let name = entry.file_name();
+        let name = name.to_string_lossy();
+        if name.ends_with(".md") {
+            pages.push(format!("docs/{name}"));
+        }
+    }
+    pages
+}
+
+fn markdown_links(text: &str) -> Vec<String> {
+    let mut links = Vec::new();
+    let bytes = text.as_bytes();
+    let mut index = 0;
+    while index + 1 < bytes.len() {
+        if bytes[index] == b']' && bytes[index + 1] == b'(' {
+            let start = index + 2;
+            if let Some(end) = text[start..].find(')') {
+                links.push(text[start..start + end].to_string());
+                index = start + end;
+                continue;
+            }
+        }
+        index += 1;
+    }
+    links
+}
+
+fn link_path(link: &str) -> Option<&str> {
+    let link = link.trim();
+    if link.is_empty() || link.starts_with('#') || link.contains("://") {
+        return None;
+    }
+    let path = link.split('#').next().unwrap_or(link);
+    let path = path.split_whitespace().next().unwrap_or(path);
+    if path.is_empty() {
+        None
+    } else {
+        Some(path)
+    }
+}
+
+fn resolve_link(from_file: &str, link: &str) -> String {
+    let mut stack: Vec<String> = std::path::Path::new(from_file)
+        .parent()
+        .unwrap_or(std::path::Path::new(""))
+        .components()
+        .filter_map(|component| match component {
+            std::path::Component::Normal(part) => Some(part.to_string_lossy().into_owned()),
+            _ => None,
+        })
+        .collect();
+    for component in std::path::Path::new(link).components() {
+        match component {
+            std::path::Component::Normal(part) => stack.push(part.to_string_lossy().into_owned()),
+            std::path::Component::ParentDir => {
+                stack.pop();
+            }
+            std::path::Component::CurDir => {}
+            _ => {}
+        }
+    }
+    stack.join("/")
+}
+
+fn cp_sources(release: &str) -> (Vec<String>, Vec<String>) {
+    let text = release.replace("\\\n", " ");
+    let mut files = Vec::new();
+    let mut trees = Vec::new();
+    for line in text.lines() {
+        let Some(rest) = line.trim().strip_prefix("cp ") else {
+            continue;
+        };
+        let mut args: Vec<&str> = rest
+            .split_whitespace()
+            .map(|part| part.trim_matches('"'))
+            .collect();
+        if args.is_empty() {
+            continue;
+        }
+        let recursive = args[0] == "-R" || args[0] == "-r";
+        if recursive {
+            args.remove(0);
+        }
+        if args.len() < 2 {
+            continue;
+        }
+        args.pop();
+        if recursive {
+            trees.extend(args.iter().map(|part| (*part).to_string()));
+        } else {
+            files.extend(args.iter().map(|part| (*part).to_string()));
+        }
+    }
+    (files, trees)
+}
+
+fn ships(files: &[String], trees: &[String], path: &str) -> bool {
+    if files.iter().any(|file| file == path) {
+        return true;
+    }
+    trees
+        .iter()
+        .any(|dir| path == dir || path.starts_with(&format!("{dir}/")))
+}
