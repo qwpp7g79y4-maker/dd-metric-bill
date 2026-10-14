@@ -2,8 +2,6 @@
 //! Device, FIFO, socket and symlink cases use Unix paths and APIs, so they run on Unix only.
 
 #[cfg(unix)]
-use std::os::unix::process::CommandExt;
-#[cfg(unix)]
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::{Child, Command, Output, Stdio};
@@ -325,6 +323,7 @@ fn symlink_becomes_fifo_between_check_and_read() {
     let fifo_link = tmp.join("link-fifo");
     std::os::unix::fs::symlink(&fifo, &fifo_link).expect("symlink to fifo");
     use std::os::unix::ffi::OsStrExt;
+    use std::os::unix::process::CommandExt;
     let link_bytes = link.as_os_str().as_bytes().to_vec();
 
     let mut child = ChildGuard(Some(unsafe {
@@ -469,12 +468,10 @@ mod trace {
             i64::from(options),
             0,
         );
-        if rc == 0 {
-            Ok(None)
-        } else if rc < 0 {
-            Err(std::io::Error::from_raw_os_error(errno_code(rc)))
-        } else {
-            Ok(Some(status))
+        match rc.cmp(&0) {
+            std::cmp::Ordering::Equal => Ok(None),
+            std::cmp::Ordering::Less => Err(std::io::Error::from_raw_os_error(errno_code(rc))),
+            std::cmp::Ordering::Greater => Ok(Some(status)),
         }
     }
 
