@@ -7,15 +7,16 @@ This page shows how each release of dd-metric-bill was checked, what we found, a
 | | |
 |---|---|
 | Version | 0.1.2 ([release](https://github.com/qwpp7g79y4-maker/dd-metric-bill/releases/tag/v0.1.2), [crates.io](https://crates.io/crates/dd-metric-bill/0.1.2)) |
-| Commit checked | [`5cf3997`](https://github.com/qwpp7g79y4-maker/dd-metric-bill/commit/5cf3997) |
-| Date | 2026-10-14 |
-| Tests | 209 automated tests, run in debug and release mode |
+| Commit checked | [`b1474ab`](https://github.com/qwpp7g79y4-maker/dd-metric-bill/commit/b1474ab) |
+| Date | 2026-10-15 |
+| Tests | 229 automated tests, run in debug and release mode |
 
 ### How we checked
 
 - The same checks as for the previous version (below), on every platform.
 - A second external automated code review. Every finding we could reproduce is fixed in this version, each with a regression test that uses the exact input.
-- Automated tests in CI: [run 38539434541](https://github.com/qwpp7g79y4-maker/dd-metric-bill/actions/runs/38539434541) on Linux, Windows, macOS on Apple Silicon and Intel, and Rust 1.85, plus `cargo audit` (no known vulnerabilities).
+- Automated tests in CI: [run 38629049504](https://github.com/qwpp7g79y4-maker/dd-metric-bill/actions/runs/38629049504) on Linux, Windows, macOS on Apple Silicon and Intel, and Rust 1.85, plus `cargo audit` (no known vulnerabilities).
+- A fresh independent final review on this commit against a fixed edge-case checklist (every item tried with a concrete bad input). It ended DONE; no blocking findings.
 
 ### What we found and fixed
 
@@ -27,6 +28,7 @@ This page shows how each release of dd-metric-bill was checked, what we found, a
 | A full disk caused a panic, and `--help`/`--version` exited 0 when output failed | Clean errors; a failed write never exits 0 |
 | Control characters from a price file or metric names reached the terminal raw | They are escaped in text output and on stderr |
 | A path swapped for a FIFO could make the tool wait; many repeated lines grew memory; time grew quadratically with unique metric names | The opened file is checked; memory is bounded; lookups are linear |
+| Duplicate JSON keys in a sample or price file were resolved silently (last wins), which could change the billable total | Duplicate keys are refused with exit 2; regression tests cover samples, price files, key order, and nested objects |
 
 All fixes are listed in the [changelog](https://github.com/qwpp7g79y4-maker/dd-metric-bill/blob/main/CHANGELOG.md).
 

@@ -58,7 +58,7 @@ jobs:
         run: |
           name="dd-metric-bill-${GITHUB_REF_NAME}-${{ matrix.target }}"
           mkdir -p "dist/$name"
-          cp README.md README.nl.md LICENSE-MIT LICENSE-APACHE CHANGELOG.md SECURITY.md "dist/$name/"
+          cp README.md README.nl.md LICENSE-MIT LICENSE-APACHE CHANGELOG.md SECURITY.md QUALITY.md QUALITY.nl.md "dist/$name/"
           cp -R docs "dist/$name/"
           cp -R prices "dist/$name/"
           mkdir -p "dist/$name/tests/fixtures"
@@ -104,6 +104,8 @@ jobs:
           test -f "$name/tests/fixtures/diff-new.dogstatsd"
           test -f "$name/tests/fixtures/empty.dogstatsd"
           test -f "$name/SECURITY.md"
+          test -f "$name/QUALITY.md"
+          test -f "$name/QUALITY.nl.md"
           test -f "$name/prices/datadog-example.json"
           if [ "${{ runner.os }}" = "Windows" ]; then
             total=$(cd "$name" && ./dd-metric-bill.exe count tests/fixtures/b1-count.dogstatsd | head -n 1 | tr -d '\r')

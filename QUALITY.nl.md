@@ -7,15 +7,16 @@ Deze pagina laat zien hoe elke release van dd-metric-bill is gecontroleerd, wat 
 | | |
 |---|---|
 | Versie | 0.1.2 ([release](https://github.com/qwpp7g79y4-maker/dd-metric-bill/releases/tag/v0.1.2), [crates.io](https://crates.io/crates/dd-metric-bill/0.1.2)) |
-| Gecontroleerde commit | [`5cf3997`](https://github.com/qwpp7g79y4-maker/dd-metric-bill/commit/5cf3997) |
-| Datum | 2026-10-14 |
-| Tests | 209 automatische tests, gedraaid in debug- en releasemodus |
+| Gecontroleerde commit | [`b1474ab`](https://github.com/qwpp7g79y4-maker/dd-metric-bill/commit/b1474ab) |
+| Datum | 2026-10-15 |
+| Tests | 229 automatische tests, gedraaid in debug- en releasemodus |
 
 ### Hoe we controleerden
 
 - Dezelfde controles als bij de vorige versie (hieronder), op elk platform.
 - Een tweede externe geautomatiseerde codereview. Elke bevinding die we konden reproduceren is in deze versie opgelost, elk met een regressietest met precies die invoer.
-- Geautomatiseerde tests in CI: [run 38539434541](https://github.com/qwpp7g79y4-maker/dd-metric-bill/actions/runs/38539434541) op Linux, Windows, macOS op Apple Silicon en Intel, en Rust 1.85, plus `cargo audit` (geen bekende kwetsbaarheden).
+- Geautomatiseerde tests in CI: [run 38629049504](https://github.com/qwpp7g79y4-maker/dd-metric-bill/actions/runs/38629049504) op Linux, Windows, macOS op Apple Silicon en Intel, en Rust 1.85, plus `cargo audit` (geen bekende kwetsbaarheden).
+- Een verse onafhankelijke eindreview op deze commit tegen een vaste edge-case-checklist (elk punt met een concrete kwade invoer). Die eindigde op DONE; geen blokkerende bevindingen.
 
 ### Wat we vonden en oplosten
 
@@ -27,6 +28,7 @@ Deze pagina laat zien hoe elke release van dd-metric-bill is gecontroleerd, wat 
 | Een volle schijf gaf een panic, en `--help`/`--version` gaven exit 0 als de uitvoer mislukte | Nette foutmeldingen; een mislukte schrijfactie geeft nooit exit 0 |
 | Stuurtekens uit een prijsbestand of metricnamen kwamen rauw in de terminal | Ze worden ge-escaped in tekstuitvoer en op stderr |
 | Een pad dat door een FIFO werd vervangen kon de tool laten wachten; veel herhaalde regels lieten het geheugen groeien; de tijd groeide kwadratisch met het aantal unieke metricnamen | Het geopende bestand wordt gecontroleerd; geheugen is begrensd; zoeken is lineair |
+| Dubbele JSON-sleutels in een sample of prijsbestand werden stil opgelost (laatste wint), wat het factureerbare totaal kon veranderen | Dubbele sleutels worden geweigerd met exit 2; regressietests dekken samples, prijsbestanden, sleutelvolgorde en geneste objecten |
 
 Alle fixes staan in de [changelog](https://github.com/qwpp7g79y4-maker/dd-metric-bill/blob/main/CHANGELOG.md).
 
