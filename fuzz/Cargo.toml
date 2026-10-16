@@ -1,0 +1,67 @@
+[package]
+name = "dd-metric-bill-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[workspace]
+
+[dependencies]
+libfuzzer-sys = "0.4"
+arbitrary = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["arbitrary_precision"] }
+
+[dependencies.dd-metric-bill]
+path = ".."
+
+[[bin]]
+name = "parse_dogstatsd"
+path = "fuzz_targets/parse_dogstatsd.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "parse_jsonl"
+path = "fuzz_targets/parse_jsonl.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "parse_prometheus"
+path = "fuzz_targets/parse_prometheus.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "parse_prices"
+path = "fuzz_targets/parse_prices.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "allow_list"
+path = "fuzz_targets/allow_list.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "count_and_render"
+path = "fuzz_targets/count_and_render.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "diff_and_render"
+path = "fuzz_targets/diff_and_render.rs"
+test = false
+doc = false
+bench = false

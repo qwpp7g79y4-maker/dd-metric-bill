@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Build
+
+- A `fuzz/` crate (cargo-fuzz) covers every parser, the price and cost calculation, the allow-list simulation, diff, and render to text and JSON; a cheap nightly build-only CI job keeps it compiling.
+- Property tests (proptest) check that parsers never panic on arbitrary bytes, that the cost calculation matches plain arithmetic, and that `count` and `diff` output stays stable and its JSON always parses.
+- More edge-case tests: a lone CR, a very long line, NUL bytes, Unicode whitespace and lookalike letters, and numbers such as `1e309` and `-0`.
+
 ## [0.1.2] - 2026-10-14
 
 ### Fixed

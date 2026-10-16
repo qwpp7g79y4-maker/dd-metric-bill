@@ -10,7 +10,7 @@ repository = "https://github.com/qwpp7g79y4-maker/dd-metric-bill"
 readme = "README.md"
 keywords = ["datadog", "metrics", "cost", "observability", "cli"]
 categories = ["command-line-utilities", "development-tools"]
-exclude = [".github/", ".gitattributes"]
+exclude = [".github/", ".gitattributes", "fuzz/"]
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
@@ -20,3 +20,5 @@ serde_json = { version = "1", features = ["arbitrary_precision"] }
 
 [dev-dependencies]
 serde_json = { version = "1", features = ["arbitrary_precision"] }
+# proptest 1.12 raises its rust-version past our MSRV; ~1.11 stays on 1.11.x.
+proptest = "~1.11"
