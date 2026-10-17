@@ -2,6 +2,63 @@
 
 Deze pagina laat zien hoe elke release van dd-metric-bill is gecontroleerd, wat we vonden en wat we hebben opgelost. Het beschrijft onze controles. Het is geen garantie dat de software foutloos of veilig is.
 
+## Unreleased
+
+| | |
+|---|---|
+| Gecontroleerde commit | [`c0a735b`](https://github.com/qwpp7g79y4-maker/dd-metric-bill/commit/c0a735b) |
+| Tests | 242 automatische tests, gedraaid in debug- en releasemodus en op Rust 1.85 (alle drie: 0 mislukt) |
+
+### Wat is toegevoegd
+
+- Een `fuzz/`-crate (cargo-fuzz, geen deel van het gepubliceerde package) met één target per fase die onbetrouwbare invoer verwerkt, elk met een eigen invariant in plaats van alleen de code aan te roepen:
+
+  | Target | Invariant |
+  |---|---|
+  | `allow_list` | Allow-list-parsing en de Metrics without Limits-simulatie geven nooit een panic; het geïndexeerde aantal overschrijdt nooit het ingelezen aantal, per metric en in totaal |
+  | `count_and_render` | `count` en het renderen naar tekst en JSON geven nooit een panic bij willekeurige samples, direct opgebouwd in plaats van via een tekstparser |
+  | `diff_and_render` | `diff` en het renderen naar tekst en JSON geven nooit een panic bij willekeurige oude/nieuwe samples |
+  | `parse_dogstatsd` | Het parsen van DogStatsD-tekst geeft nooit een panic bij willekeurige bytes; een geparste sample doorstaat dezelfde controles als `count_and_render` |
+  | `parse_jsonl` | Het parsen van JSON-lines geeft nooit een panic bij willekeurige bytes, inclusief een `\uXXXX`-escape, een dubbele sleutel, of een waarde die meerdere regels beslaat |
+  | `parse_prices` | Het parsen van prijsbestanden geeft nooit een panic bij willekeurige tekst; een kostenbedrag is altijd een simpel niet-negatief decimaal getal, nooit negatief, `NaN`, of oneindig, en `0` als het gebruik op of onder het budget blijft |
+  | `parse_prometheus` | Het parsen van Prometheus-tekst geeft nooit een panic bij willekeurige bytes, inclusief onafgesloten labelwaarden, onbekende `# TYPE`-families, en namen met multi-byte UTF-8 |
+
+  Een gedeelde controle bij de render-targets bevestigt dat geen tagwaarde lekt naar tekst- of JSON-uitvoer, en dat tekstuitvoer elk rauw stuurteken escaped behalve `\n` (JSON laat het rauwe byte staan als de JSON-specificatie escapen niet vereist, wat nog steeds geldige, parseerbare JSON is).
+
+- Property tests (`proptest`, gedraaid onder normale `cargo test`): parsers geven nooit een panic bij willekeurige bytes; de kostenberekening komt overeen met gewone gehele-getallenrekenkunde; `count` en `diff` renderen stabiele tekst en JSON, en die JSON parseert altijd met totalen die overeenkomen met de som van de delen.
+- `tests/more_edge_cases.rs`: een losse CR, een tagwaarde van 2.000.000 bytes, een NUL-byte in een metricnaam, Unicode-witruimte en op elkaar lijkende letters, en getallen zoals `1e309` en `-0` in JSONL-waarden en in prijzen.
+- CI: een nachtelijke `fuzz-build`-job bouwt de 7 fuzz-targets (alleen bouwen, niet draaien); de fuzz-crate is verder uitgesloten van de stabiele CI en van het gepubliceerde package.
+
+### Hoe we controleerden
+
+- `cargo test`, `cargo test --release`, en `cargo +1.85 test`: 242 geslaagd, 0 mislukt, bij elke run, exit 0.
+- `cargo clippy --all-targets -- -D warnings`: exit 0. `cargo fmt --check`, in de hoofdcrate en in `fuzz/`: exit 0.
+- `cargo +nightly fuzz build`: exit 0.
+- Elk van de 7 fuzz-targets draaide 660 seconden op één vastgezette CPU-kern, achter elkaar (in totaal ongeveer 77 minuten):
+
+  | Target | Seconden | Uitvoeringen | Crashes |
+  |---|---|---|---|
+  | `allow_list` | 661 | 3.478.548 | 0 |
+  | `count_and_render` | 662 | 798.406 | 0 |
+  | `diff_and_render` | 661 | 680.315 | 0 |
+  | `parse_dogstatsd` | 662 | 3.279.909 | 0 |
+  | `parse_jsonl` | 661 | 29.882.236 | 0 |
+  | `parse_prices` | 661 | 15.151.042 | 0 |
+  | `parse_prometheus` | 662 | 4.939.565 | 0 |
+
+- CI op deze commit: [run 38991624843](https://github.com/qwpp7g79y4-maker/dd-metric-bill/actions/runs/38991624843), voltooid, succesvol.
+
+### Echte bugs gevonden
+
+Geen. Dit werk heeft een controle in de testharnas zelf gecorrigeerd: een C1-stuurteken mag rauw blijven staan in geldige JSON, dus de regel "elk stuurteken wordt geescaped" die de harnas afdwingt geldt alleen voor tekstuitvoer, niet voor JSON. Dat is een correctie van de testharnas, geen productbug.
+
+### Open punten
+
+- De fuzz-runs hierboven zijn korte lokale runs (11 minuten per target, elk op één kern), geen continue fuzzing, en startten elke keer met een lege corpus.
+- CI bouwt de fuzz-targets alleen; het draait ze niet, dus CI alleen zou een crash die een lokale fuzz-run wel vindt niet opvangen.
+- `tests/more_edge_cases.rs` documenteert een inconsistentie in plaats van die op te lossen: een prijs geschreven als het kale gehele getal `-0` wordt geaccepteerd als prijs `0`, terwijl `-0.0` en `-0e0` worden geweigerd als negatief. De berekende kosten zijn in beide gevallen `0`.
+- Dit onderdeel is geen eindreview van deze versie; een verse eindreview volgt na deze commit, tegen de vaste edge-case-checklist die ook bij vorige versies is gebruikt. De releasebadge verandert niet door dit onderdeel.
+
 ## v0.1.2
 
 | | |
