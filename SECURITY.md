@@ -6,9 +6,11 @@
 | --- | --- |
 | 0.1.x | Yes |
 
+Security fixes go into the latest release only.
+
 ## Reporting a vulnerability
 
-Please report security problems privately by e-mail to pep_ai@icloud.com, not in a public issue. Examples are a tag value that ends up in the output or in an error message, a raw sample line that ends up in an error message, or a way to make dd-metric-bill read, write or hang on something it should refuse.
+Please report security problems privately, not in a public issue: open the **Security** tab of this repository and choose **Report a vulnerability**. If that is not possible, e-mail pep_ai@icloud.com. Examples are a tag value that ends up in the output or in an error message, a raw sample line that ends up in an error message, or a way to make dd-metric-bill read, write or hang on something it should refuse.
 
 Please include:
 
@@ -17,4 +19,4 @@ Please include:
 - a minimal input that reproduces the problem, with made-up values instead of real host names, IDs or other sensitive values;
 - what dd-metric-bill printed and what you expected.
 
-We aim to acknowledge a report and follow up within a reasonable time. Once a fix is released, the report can be credited in the changelog if you wish.
+We aim to respond within 7 days (best effort). Once a fix is released, the report can be credited in the changelog if you wish.
