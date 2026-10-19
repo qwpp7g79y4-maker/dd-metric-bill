@@ -21,4 +21,4 @@ serde_json = { version = "1", features = ["arbitrary_precision"] }
 [dev-dependencies]
 serde_json = { version = "1", features = ["arbitrary_precision"] }
 # proptest 1.12 raises its rust-version past our MSRV; ~1.11 stays on 1.11.x.
-proptest = "~1.11"
+proptest = "~1.12"
