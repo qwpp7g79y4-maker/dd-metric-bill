@@ -1,0 +1,3 @@
+checkout.count:1|c|#endpoint:pay,region:eu
+checkout.count:1|c|#endpoint:pay,region:us
+checkout.count:1|c|#endpoint:refund,region:eu

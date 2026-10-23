@@ -107,6 +107,65 @@ total: 0
 estimate: Datadog bills the hourly average over the month; this is one snapshot (source: B1)
 ```
 
+### Try it on your own data
+
+No clone and no fixtures needed: these two files are copy-pasteable and are enough to see a cost in a real currency.
+
+```sh
+cat > quickstart.dogstatsd <<'LOG'
+checkout.count:1|c|#endpoint:pay,region:eu
+checkout.count:1|c|#endpoint:pay,region:us
+checkout.count:1|c|#endpoint:refund,region:eu
+LOG
+cat > quickstart-prices.json <<'JSON'
+{
+  "currency": "USD",
+  "source": "https://docs.datadoghq.com/account_management/billing/custom_metrics",
+  "date": "2026-10-07",
+  "ingested_per_100": 0.10
+}
+JSON
+```
+
+```console
+$ dd-metric-bill count --plan pro --allow-tags endpoint,region --prices quickstart-prices.json quickstart.dogstatsd
+total: 3
+allotment: 0
+indexed: 3 surplus: 3
+ingested: 3 surplus: 3
+price: USD per 100
+source: https://docs.datadoghq.com/account_management/billing/custom_metrics
+date: 2026-10-07
+cost ingested: 0.003 USD
+
+checkout.count type: count combinations: 3 count: 3 rule: D3
+  ingested: 3 indexed: 3
+  tag: endpoint values: 2 added: 1
+  tag: region values: 2 added: 1
+
+estimate: Datadog bills the hourly average over the month; this is one snapshot (source: B1)
+```
+
+This sample does not tag `host`, so `--hosts` has nothing to derive and the plan's free allotment is 0: every ingested combination above that allotment is billable, so the whole volume shows up as `cost ingested: 0.003 USD` at 0.10 USD per 100 (the real Datadog list price, read 7 October 2026). On a sample that does tag `host`, pass `--hosts N` yourself, or tag `host` and let it be derived, to see the free allotment applied first. Without `--plan` there is no allotment and no cost line, only the `price:`/`source:`/`date:` lines from the price file.
+
+### Get a sample from your own setup
+
+dd-metric-bill reads a plain-text sample; it does not capture metrics itself.
+
+- **Prometheus** (`--format prometheus`): scrape your own exporter endpoint once, with your real host and port: `curl -s http://localhost:9100/metrics > sample.prom`.
+- **DogStatsD** (the default format): point your application at a throwaway UDP listener instead of the real Datadog Agent for a short time, then put it back:
+  ```sh
+  nc -u -l 8126 > sample.dogstatsd &
+  # let the application send its usual traffic for 30-60 seconds, then:
+  kill %1
+  ```
+  Use an unused port (`DD_DOGSTATSD_PORT` or your client's equivalent) so this does not compete with the real Agent, and stop the listener once a typical traffic burst is captured.
+- **JSON lines** (`--format jsonl`): if a metrics pipeline already logs one JSON object per point (`{"metric":...,"type":...,"tags":[...]}`), capture a slice of that log, for example `tail -n 2000 pipeline.jsonl > sample.jsonl`.
+
+None of this needs a Datadog API key: it only reads traffic or logs your own application already produces.
+
+`count` and `diff` also read standard input when a sample path is `-`, for example `tail -n 2000 pipeline.jsonl | dd-metric-bill count --format jsonl -`; output and exit code are the same as for a real file with the same bytes.
+
 Prices come only from a JSON file you pass with `--prices`; see [the price file format](docs/reference.md#price-file). Every text output ends with `estimate: Datadog bills the hourly average over the month; this is one snapshot (source: B1)`. All options, exit codes, and error messages are listed in the [reference](docs/reference.md) and in `dd-metric-bill --help`.
 
 ## How it counts
@@ -130,7 +189,8 @@ dd-metric-bill applies Datadog's rules. The `host` tag counts, a histogram or di
 - Only the "Latest Version" mapping is followed. The mapping comes from B2 (Mapping Prometheus Metrics to Datadog Metrics, https://docs.datadoghq.com/integrations/guide/prometheus-metrics/, read 7 October 2026). Skipping untyped metrics comes from B3 (Datadog, OpenMetrics, section Missing untyped metrics, https://docs.datadoghq.com/integrations/openmetrics/, read 7 October 2026): "By default, the integration skips metrics that come without a type on a Prometheus exposition." That is the default behavior of the Datadog Agent OpenMetrics check.
 - A UTF-8 BOM at the start of a file is skipped, in DogStatsD, JSONL, and Prometheus. That is a choice: the BOM does not belong to the metric name. A BOM later in the file stays.
 - The `_created` sample of an OpenMetrics counter does not count. What Datadog does with it is not verified.
-- Only regular files are read, as a sample for `count` and `diff` and as `--prices`. A directory, FIFO, device, or other non-regular path is not read. Symlinks are followed. The opened file is checked, so the read does not wait when the path is a FIFO.
+- Only regular files are read, as a sample for `count` and `diff` and as `--prices`, except a sample path of `-`, which reads standard input instead. A directory, FIFO, device, or other non-regular path is not read. Symlinks are followed. The opened file is checked, so the read does not wait when the path is a FIFO. Giving `-` more than once in the same command reads the whole of standard input for the first one and nothing for the rest.
+- Memory use grows with the size of the sample: the whole sample is parsed into memory before counting, one entry per line. Measured on one machine: about 1.08 GB RSS for a DogStatsD sample of about 480,000 series, 14.1 seconds. A much larger sample needs memory and time accordingly; there is no streaming mode.
 - A Prometheus histogram or summary series that lands on the same name and kind as another sample counts once. The same tags are one combination. `latency_count` from a histogram `latency` and a counter named `latency.count` with the same labels are one metric.
 - A report that cannot be written exits 2 (`could not write the report: REASON`). That is not success, and it does not panic. `--help` and `--version` that cannot be written exit 3. Control characters in currency, source, date, and in a metric name on an error line are printed as `\xNN`.
 - Only count accepts --explain, --plan, --hosts, --allow-tags, --prices and --unbounded-threshold. On `diff` they exit 3 (`option does not apply to diff: <option>`), before samples or the price file are read.
