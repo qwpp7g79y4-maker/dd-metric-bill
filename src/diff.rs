@@ -103,8 +103,12 @@ pub fn diff_samples(
         .map(|key| {
             let left = old.metrics.get(key);
             let right = new.metrics.get(key);
-            let side = left
-                .or(right)
+            // The new sample's classification wins when the metric is in
+            // both: a counter can start sharing a renamed histogram suffix
+            // name (D10 to D3) between the two samples, and `rule` should
+            // describe the current (new) sample, not a stale one.
+            let side = right
+                .or(left)
                 .expect("key comes from the old or the new sample");
             let old_count = left.map(|item| item.count);
             let new_count = right.map(|item| item.count);
@@ -243,7 +247,8 @@ fn kind_ord(kind: Kind) -> u8 {
 #[cfg(test)]
 mod tests {
     use super::diff_samples;
-    use crate::parse::{parse_dogstatsd, Kind, Sample};
+    use crate::count::count_by_metric;
+    use crate::parse::{parse_dogstatsd, parse_prometheus, Kind, Sample};
 
     fn fixture(name: &str) -> Vec<Sample> {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -394,5 +399,55 @@ mod tests {
         assert_eq!(report.new_total, 0);
         assert_eq!(report.delta, 0);
         assert!(report.metrics.is_empty());
+    }
+
+    /// A metric present on both sides can change rule: in `old`, `latency.count`
+    /// comes only from the histogram's `_count` suffix (D10). In `new`, a plain
+    /// counter literally named `latency.count` shares the same tags, so the
+    /// group is mixed and `count_by_metric` reports D3 for it (the same case as
+    /// `prometheus_histogram_and_same_name_counter_count_once`). `diff` must
+    /// report that metric's rule as it is in `new`, not a stale D10 carried
+    /// over from `old`, matching what `count` reports for `new` on its own.
+    #[test]
+    fn rule_reflects_the_new_sample_not_a_stale_old_one() {
+        let old = parse_prometheus(
+            "\
+# TYPE latency histogram
+latency_count{host=\"a\"} 1
+latency_sum{host=\"a\"} 2
+latency_bucket{host=\"a\",le=\"+Inf\"} 1
+",
+        )
+        .expect("synthetic sample");
+        let new = parse_prometheus(
+            "\
+# TYPE latency histogram
+latency_count{host=\"a\"} 1
+latency_sum{host=\"a\"} 2
+latency_bucket{host=\"a\",le=\"+Inf\"} 1
+# TYPE latency.count counter
+latency.count{host=\"a\"} 5
+",
+        )
+        .expect("synthetic sample");
+
+        let direct = count_by_metric(&new, 4, 1, false).expect("count");
+        let direct_rule = direct
+            .metrics
+            .iter()
+            .find(|metric| metric.name == "latency.count")
+            .expect("latency.count")
+            .rule
+            .code;
+        assert_eq!(direct_rule, "D3");
+
+        let report = diff_samples(&old, &new, 4, 1, false, None).expect("count");
+        let metric = report
+            .metrics
+            .iter()
+            .find(|metric| metric.name == "latency.count")
+            .expect("latency.count");
+        assert_eq!(metric.rule, direct_rule);
+        assert_eq!(metric.rule, "D3");
     }
 }
