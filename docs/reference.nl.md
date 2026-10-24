@@ -135,6 +135,8 @@ Als stdout het verslag niet kan aannemen, is stderr `could not write the report:
 
 Een sample en een prijsbestand moeten gewone bestanden zijn. Het pad wordt geopend zonder te wachten, en alleen dat geopende bestand wordt gelezen. Een symlink wordt gevolgd. Een map, FIFO, device of ander niet-regulier pad wordt niet gelezen, zodat een FIFO zonder schrijver niet blijft hangen. Het type komt van het geopende bestand, zodat een pad dat een FIFO wordt het lezen niet laat wachten. De melding is `cannot read sample: PATH: REASON` of `cannot read price file: PATH: REASON`, en `REASON` bevat `not a regular file` als het pad geen gewoon bestand is.
 
+Een pad `-` bij `count` of `diff` leest standaardinvoer.
+
 Een prijsbestand dat geen geldige JSON is, geen object is, of een slecht veld heeft, schrijft `invalid price file: PATH: DETAIL`. `DETAIL` is een van: `not valid json`, `not an object`, `missing field: FIELD`, `empty field: FIELD`, `field is not text: FIELD`, `field is not a number: FIELD`, `field is negative: FIELD`, `field is too large: FIELD`, `unknown field`. Een sleutel die op het hoogste niveau twee keer voorkomt schrijft alleen `price file has a duplicate key`: geen pad en geen tekst uit het bestand.
 
 Een slecht sample noemt het formaat en het regelnummer vanaf 1, nooit de regel zelf:

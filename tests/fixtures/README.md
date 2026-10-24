@@ -62,6 +62,14 @@ Synthetic price file. `ingested_per_100` has more than 12 digits after the decim
 
 Synthetic. Two histogram metrics, `a` and `b`, each with one tag combination. Used to show the overflow message when the two counts do not fit in one total.
 
+## quickstart-prices.json
+
+Synthetic price file for the quick start. Currency USD, date 2026-10-07, ingested 0.10 per 100. The same JSON the README shell block pastes.
+
+## quickstart.dogstatsd
+
+Synthetic DogStatsD sample for the quick start. Three `checkout.count` lines with tags `endpoint` and `region`, and no `host`. The same three lines the README shell block pastes.
+
 ## user-id.dogstatsd
 
 Synthetic, so the key `user_id` adds the most series. Four count lines `checkout` with `env` prod. Three lines have `endpoint` pay and `user_id` u1, u2, and u3. The fourth has `endpoint` cart and u3 again. Without `user_id` two combinations remain (pay and cart); with `user_id` there are four, so that key adds two.

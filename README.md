@@ -109,7 +109,7 @@ estimate: Datadog bills the hourly average over the month; this is one snapshot 
 
 ### Try it on your own data
 
-No clone and no fixtures needed: these two files are copy-pasteable and are enough to see a cost in a real currency.
+No clone needed: paste the shell block to create the two files and run the count. The console example reads the same files from `tests/fixtures/`, which the release archive includes.
 
 ```sh
 cat > quickstart.dogstatsd <<'LOG'
@@ -125,10 +125,11 @@ cat > quickstart-prices.json <<'JSON'
   "ingested_per_100": 0.10
 }
 JSON
+dd-metric-bill count --plan pro --allow-tags endpoint,region --prices quickstart-prices.json quickstart.dogstatsd
 ```
 
 ```console
-$ dd-metric-bill count --plan pro --allow-tags endpoint,region --prices quickstart-prices.json quickstart.dogstatsd
+$ dd-metric-bill count --plan pro --allow-tags endpoint,region --prices tests/fixtures/quickstart-prices.json tests/fixtures/quickstart.dogstatsd
 total: 3
 allotment: 0
 indexed: 3 surplus: 3
