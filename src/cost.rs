@@ -284,17 +284,25 @@ fn price_error(field: &'static str, error: PriceNumberError) -> PriceError {
     PriceError::new(reason)
 }
 
+/// The exponent digits of a JSON number (`[eE][+-]?[0-9]+`), already past the `e`/`E`.
+///
+/// A magnitude that does not fit `i32` is `TooLarge`, not `NotNumber`: the
+/// text is still a valid number, just one whose exponent this tool cannot
+/// represent. Only text that is not `[+-]?[0-9]+` is `NotNumber`.
+fn parse_exponent(raw: &str) -> Result<i32, PriceNumberError> {
+    let digits = raw.strip_prefix(['+', '-']).unwrap_or(raw);
+    if digits.is_empty() || !digits.bytes().all(|byte| byte.is_ascii_digit()) {
+        return Err(PriceNumberError::NotNumber);
+    }
+    raw.parse().map_err(|_| PriceNumberError::TooLarge)
+}
+
 fn parse_price(raw: &str) -> Result<PricePer100, PriceNumberError> {
     if raw.starts_with('-') {
         return Err(PriceNumberError::Negative);
     }
     let (mant, exp) = match raw.find(['e', 'E']) {
-        Some(index) => {
-            let exp: i32 = raw[index + 1..]
-                .parse()
-                .map_err(|_| PriceNumberError::NotNumber)?;
-            (&raw[..index], exp)
-        }
+        Some(index) => (&raw[..index], parse_exponent(&raw[index + 1..])?),
         None => (raw, 0i32),
     };
     if mant.is_empty() {
@@ -625,5 +633,23 @@ mod tests {
             };
             assert_eq!(err, expected, "{name}");
         }
+    }
+
+    /// An exponent with so many digits that it overflows `i32` (`e99999999999`,
+    /// 11 digits, far past `i32::MAX`) is still a syntactically valid JSON
+    /// number: `[eE][+-]?[0-9]+` never bounds how many exponent digits there
+    /// are. It must be rejected the same way any other oversized price is
+    /// (`field is too large`), not as `field is not a number`: the text is a
+    /// number, just one whose magnitude this tool cannot represent.
+    #[test]
+    fn price_with_an_exponent_that_overflows_i32_is_too_large_not_not_a_number() {
+        let json = r#"{"currency":"TST","source":"s","date":"2026-01-01","ingested_per_100":1e99999999999}"#;
+        let err = parse_prices(json).expect_err("exponent overflows i32");
+        assert_eq!(err.to_string(), "field is too large: ingested_per_100");
+
+        // A negative exponent that overflows the same way is also too large.
+        let json = r#"{"currency":"TST","source":"s","date":"2026-01-01","ingested_per_100":1e-99999999999}"#;
+        let err = parse_prices(json).expect_err("negative exponent overflows i32");
+        assert_eq!(err.to_string(), "field is too large: ingested_per_100");
     }
 }
