@@ -35,7 +35,7 @@ pub fn parse_allow_tags(list: &str) -> BTreeSet<String> {
     list.split(',')
         .map(str::trim)
         .filter(|key| !key.is_empty())
-        .map(str::to_string)
+        .map(str::to_lowercase)
         .collect()
 }
 

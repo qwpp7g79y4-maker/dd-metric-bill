@@ -112,10 +112,22 @@ pub enum Kind {
 }
 
 /// Tag from the sample. `value` is `None` when the tag has no value.
+///
+/// Datadog stores tags in lowercase, so the parsers lowercase key and value:
+/// `Env:Prod` and `env:prod` are one tag.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Tag {
     pub key: String,
     pub value: Option<String>,
+}
+
+impl Tag {
+    pub(crate) fn lowercase(key: String, value: Option<String>) -> Self {
+        Self {
+            key: key.to_lowercase(),
+            value: value.map(|value| value.to_lowercase()),
+        }
+    }
 }
 
 /// One line carried two different values of the key `host`.

@@ -335,7 +335,7 @@ fn parse_labels(input: &str) -> Result<(Vec<Tag>, &str), Fail> {
         rest = after_is.trim_start();
         let (value, after_value) = parse_quoted(rest)?;
         let value = if value.is_empty() { None } else { Some(value) };
-        tags.push(Tag { key, value });
+        tags.push(Tag::lowercase(key, value));
         rest = after_value.trim_start();
         // `label_pairs = label_pair { "," label_pair } [ "," ]`: the trailing comma is allowed.
         if let Some(after_comma) = rest.strip_prefix(',') {

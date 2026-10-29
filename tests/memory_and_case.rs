@@ -121,5 +121,5 @@ fn hosts_differing_only_in_case_are_one_host() {
     let file = TempPath::text("m:1|c|#host:A\nm:1|c|#host:a\n");
     let output = run(&["count", "--plan", "pro", file.path()]);
     let stdout = String::from_utf8(output.stdout).expect("utf-8");
-    assert!(stdout.contains("hosts: 1"), "{stdout}");
+    assert!(stdout.contains("allotment: 100"), "{stdout}");
 }

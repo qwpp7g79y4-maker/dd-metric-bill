@@ -205,7 +205,7 @@ fn tag_of(piece: &str) -> Result<Tag, Fail> {
         }
         None => (piece.to_string(), None),
     };
-    Ok(Tag { key, value })
+    Ok(Tag::lowercase(key, value))
 }
 
 #[cfg(test)]

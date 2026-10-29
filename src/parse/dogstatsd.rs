@@ -199,7 +199,7 @@ fn parse_tags(raw: &str) -> Result<Vec<Tag>, Reason> {
             }
             None => (piece.to_string(), None),
         };
-        tags.push(Tag { key, value });
+        tags.push(Tag::lowercase(key, value));
     }
     Ok(tags)
 }

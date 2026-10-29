@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Tags are counted in lowercase, as Datadog stores them: `Env:Prod` and `env:prod` are one series, and `HOST` is the `host` tag. `--allow-tags` keys are lowercased too. Metric names stay case sensitive.
+
 ### Build
 
 - A `fuzz/` crate (cargo-fuzz) covers every parser, the price and cost calculation, the allow-list simulation, diff, and render to text and JSON; a cheap nightly build-only CI job keeps it compiling.
