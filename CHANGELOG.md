@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+The next release will be 0.2.0, because of the breaking changes below.
+
+### Changed
+
+- Breaking: `Sample.name`, `Tag.key`, and `Tag.value` are now `Arc<str>` (the type `parse::Text`) instead of `String`.
+- Breaking: `#HOST:a,HOST:b` (two values that are the same `host` key after lowercasing) now exits with 2, like `#host:a,host:b`.
+
 ### Fixed
 
 - Tags are counted in lowercase, as Datadog stores them: `Env:Prod` and `env:prod` are one series, and `HOST` is the `host` tag. `--allow-tags` keys are lowercased too. Metric names stay case sensitive.

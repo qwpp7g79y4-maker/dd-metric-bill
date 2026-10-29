@@ -170,8 +170,9 @@ pub(crate) const HOST_CONFLICT: &str = "host has more than one value";
 
 /// `true` when `tags` has two or more different values for the key `host`.
 ///
-/// The key is `host`. `HOST` is a different key. A tag with no value does not
-/// count. The same value twice is one host. Other keys may repeat.
+/// Tags are already lowercase, so `HOST` and `host` are the same key: `HOST:a`
+/// and `host:b` conflict. A tag with no value does not count. The same value
+/// twice is one host. Other keys may repeat.
 pub(crate) fn conflicting_host(tags: &[Tag]) -> bool {
     let mut first: Option<&str> = None;
     for tag in tags.iter().filter(|tag| &*tag.key == "host") {
