@@ -1,8 +1,9 @@
+use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::fmt::{self, Write};
 
 use crate::parse::{Kind, Sample, Tag};
-use crate::series::{combo_of, Combo, Interner};
+use crate::series::{combo_of, lowered, Combo, Interner};
 
 /// Default `histogram_aggregates`: `max`, `median`, `avg`, `count` (D4).
 pub const DEFAULT_HISTOGRAM_AGGREGATES: u64 = 4;
@@ -370,14 +371,14 @@ fn against(usage: u64, allotted: u64) -> AgainstAllotment {
     }
 }
 
-/// Unique values of the `host` tag. A tag without a value does not count (D7).
+/// Unique values of the `host` tag, compared in lowercase like a parsed tag. A tag without a value does not count (D7).
 #[must_use]
 pub fn unique_hosts(samples: &[Sample]) -> u64 {
-    let hosts: BTreeSet<&str> = samples
+    let hosts: BTreeSet<Cow<str>> = samples
         .iter()
         .flat_map(|sample| &sample.tags)
-        .filter(|tag| &*tag.key == "host")
-        .filter_map(|tag| tag.value.as_deref())
+        .filter(|tag| lowered(&tag.key) == "host")
+        .filter_map(|tag| tag.value.as_deref().map(lowered))
         .collect();
     u64::try_from(hosts.len()).expect("number of hosts fits in u64")
 }

@@ -5,9 +5,12 @@ mod prometheus;
 
 pub(crate) use json_keys::repeats_top_level_key;
 
+use std::borrow::Cow;
 use std::collections::HashSet;
 use std::fmt;
 use std::sync::Arc;
+
+use crate::series::lowered;
 
 /// Lines already stored.
 ///
@@ -172,17 +175,18 @@ pub(crate) const HOST_CONFLICT: &str = "host has more than one value";
 
 /// `true` when `tags` has two or more different values for the key `host`.
 ///
-/// Tags from the parsers are already lowercase, so `HOST` and `host` are the
-/// same key: `HOST:a` and `host:b` conflict. A tag with no value does not count. The same value
-/// twice is one host. Other keys may repeat.
+/// Key and value are compared in lowercase, so `HOST` and `host` are the same
+/// key and `HOST:a` and `host:b` conflict, also in tags built by hand. A tag
+/// with no value does not count. The same value twice is one host. Other keys
+/// may repeat.
 pub(crate) fn conflicting_host(tags: &[Tag]) -> bool {
-    let mut first: Option<&str> = None;
-    for tag in tags.iter().filter(|tag| &*tag.key == "host") {
-        let Some(value) = tag.value.as_deref() else {
+    let mut first: Option<Cow<str>> = None;
+    for tag in tags.iter().filter(|tag| lowered(&tag.key) == "host") {
+        let Some(value) = tag.value.as_deref().map(lowered) else {
             continue;
         };
-        if let Some(seen) = first {
-            if seen != value {
+        if let Some(seen) = &first {
+            if *seen != value {
                 return true;
             }
         } else {
@@ -191,6 +195,9 @@ pub(crate) fn conflicting_host(tags: &[Tag]) -> bool {
     }
     false
 }
+
+#[cfg(test)]
+mod conflict_tests;
 
 #[cfg(test)]
 mod tests {

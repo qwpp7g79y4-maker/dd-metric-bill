@@ -42,8 +42,14 @@ pub(crate) type Pair = (u32, u32);
 pub(crate) type Combo = Box<[Pair]>;
 
 /// `text` in lowercase, borrowed when it already is.
+///
+/// The one lowercase rule for hand-built tags: it is `str::to_lowercase`, as in
+/// the parsers. Titlecase letters such as U+01C5 are not uppercase but do change.
 pub(crate) fn lowered(text: &str) -> Cow<'_, str> {
-    if text.chars().any(char::is_uppercase) {
+    if text
+        .chars()
+        .any(|c| c.to_lowercase().ne(std::iter::once(c)))
+    {
         Cow::Owned(text.to_lowercase())
     } else {
         Cow::Borrowed(text)

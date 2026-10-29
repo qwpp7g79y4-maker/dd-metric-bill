@@ -11,6 +11,7 @@ The next release will be 0.2.0, because of the breaking changes below.
 - Breaking: `Sample.name`, `Tag.key`, and `Tag.value` are now `Arc<str>` (the type `parse::Text`) instead of `String`.
 - Breaking: `#HOST:a,HOST:b` (two values that are the same `host` key after lowercasing) now exits with 2, like `#host:a,host:b`.
 - Counting lowercases tags, so a `Sample` built through the public API with `HOST:a` counts the same as a parsed `host:a`. The tags in the `Sample` are not changed.
+- `unique_hosts` and the `host` conflict check lowercase key and value with the same rule, so a hand-built `HOST:A` is the host `a` and `HOST:a` with `host:b` conflicts. Tags that only change as titlecase letters (such as U+01C5) are lowercased too.
 
 ### Fixed
 

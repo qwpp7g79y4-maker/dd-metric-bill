@@ -145,3 +145,43 @@ fn hand_built_tags_count_like_parsed_tags() {
     let report = count_by_metric(&samples, 4, 1, false).expect("count");
     assert_eq!(report.total, 1);
 }
+
+fn built(key: &str, value: &str) -> dd_metric_bill::parse::Sample {
+    use dd_metric_bill::parse::{Kind, Sample, Tag};
+    Sample {
+        name: "m".into(),
+        kind: Kind::Count,
+        tags: vec![Tag {
+            key: key.into(),
+            value: Some(value.into()),
+        }],
+        d10: false,
+        counter_total: false,
+    }
+}
+
+/// A hand-built `HOST:A` is the host `a`, like a parsed `host:a`.
+#[test]
+fn hand_built_hosts_count_like_parsed_hosts() {
+    use dd_metric_bill::count::unique_hosts;
+    use dd_metric_bill::parse::parse_dogstatsd;
+
+    let mut samples = parse_dogstatsd("m:1|c|#host:a\n").expect("parse");
+    assert_eq!(unique_hosts(&samples), 1);
+    samples.push(built("HOST", "A"));
+    samples.push(built("Host", "a"));
+    assert_eq!(unique_hosts(&samples), 1);
+    assert_eq!(unique_hosts(&[built("HOST", "A")]), 1);
+}
+
+/// A titlecase letter (U+01C5) is not uppercase but lowercases to U+01C6.
+#[test]
+fn hand_built_titlecase_counts_like_parsed_lowercase() {
+    use dd_metric_bill::count::count_by_metric;
+    use dd_metric_bill::parse::parse_dogstatsd;
+
+    let mut samples = parse_dogstatsd("m:1|c|#k:\u{1c6}\n").expect("parse");
+    samples.push(built("k", "\u{1c5}"));
+    let report = count_by_metric(&samples, 4, 1, false).expect("count");
+    assert_eq!(report.total, 1);
+}
