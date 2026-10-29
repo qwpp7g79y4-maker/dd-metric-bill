@@ -1,13 +1,8 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::fmt::{self, Write};
 
-use crate::parse::{Kind, Sample};
-
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
-struct TagPair {
-    key: String,
-    value: Option<String>,
-}
+use crate::parse::{Kind, Sample, Tag};
+use crate::series::{combo_of, Combo, Interner};
 
 /// Default `histogram_aggregates`: `max`, `median`, `avg`, `count` (D4).
 pub const DEFAULT_HISTOGRAM_AGGREGATES: u64 = 4;
@@ -187,7 +182,7 @@ pub struct Allotment {
 
 struct Group {
     kind: Kind,
-    combinations: BTreeSet<BTreeSet<TagPair>>,
+    combinations: HashSet<Combo>,
     /// True only when every sample in the group is a Prometheus histogram or summary.
     all_d10: bool,
     /// True only when every sample in the group is an OpenMetrics counter `_total`.
@@ -274,19 +269,39 @@ pub fn count_by_metric(
     histogram_percentiles: u64,
     percentiles: bool,
 ) -> Result<CountReport, CountError> {
+    count_tags_where(
+        samples,
+        |_| true,
+        histogram_aggregates,
+        histogram_percentiles,
+        percentiles,
+    )
+}
+
+/// [`count_by_metric`] over only the tags that pass `keep`.
+pub(crate) fn count_tags_where(
+    samples: &[Sample],
+    keep: impl Fn(&Tag) -> bool,
+    histogram_aggregates: u64,
+    histogram_percentiles: u64,
+    percentiles: bool,
+) -> Result<CountReport, CountError> {
+    let mut interner = Interner::default();
     let mut groups: BTreeMap<(String, u8), Group> = BTreeMap::new();
     for sample in samples {
-        let key = (sample.name.clone(), kind_ord(sample.kind));
+        let key = (sample.name.to_string(), kind_ord(sample.kind));
         let group = groups.entry(key).or_insert_with(|| Group {
             kind: sample.kind,
-            combinations: BTreeSet::new(),
+            combinations: HashSet::new(),
             all_d10: true,
             all_counter_total: true,
         });
         // A mixed group is no longer a pure D10 or D12 series. The factor stays 1.
         group.all_d10 &= sample.d10;
         group.all_counter_total &= sample.counter_total;
-        group.combinations.insert(tags_of(sample));
+        group
+            .combinations
+            .insert(combo_of(&mut interner, sample, &keep));
     }
 
     let mut metrics = Vec::with_capacity(groups.len());
@@ -361,7 +376,7 @@ pub fn unique_hosts(samples: &[Sample]) -> u64 {
     let hosts: BTreeSet<&str> = samples
         .iter()
         .flat_map(|sample| &sample.tags)
-        .filter(|tag| tag.key == "host")
+        .filter(|tag| &*tag.key == "host")
         .filter_map(|tag| tag.value.as_deref())
         .collect();
     u64::try_from(hosts.len()).expect("number of hosts fits in u64")
@@ -390,17 +405,6 @@ fn kind_ord(kind: Kind) -> u8 {
         Kind::Distribution => 3,
         Kind::Untyped => 4,
     }
-}
-
-fn tags_of(sample: &Sample) -> BTreeSet<TagPair> {
-    sample
-        .tags
-        .iter()
-        .map(|tag| TagPair {
-            key: tag.key.clone(),
-            value: tag.value.clone(),
-        })
-        .collect()
 }
 
 fn factor_and_rule(

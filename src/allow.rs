@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 
-use crate::count::{count_by_metric, CountError};
-use crate::parse::{Kind, Sample, Tag};
+use crate::count::{count_by_metric, count_tags_where, CountError};
+use crate::parse::{Kind, Sample};
 
 /// Allowlist count for one metric name and kind (D6).
 ///
@@ -71,8 +71,9 @@ pub fn simulate(
         histogram_percentiles,
         percentiles,
     )?;
-    let indexed = count_by_metric(
-        &only_allowed(samples, allow_tags),
+    let indexed = count_tags_where(
+        samples,
+        |tag| allow_tags.contains(&*tag.key),
         histogram_aggregates,
         histogram_percentiles,
         percentiles,
@@ -131,24 +132,6 @@ fn only_indexed(
         ingested: None,
         indexed: report.total,
     })
-}
-
-fn only_allowed(samples: &[Sample], allow_tags: &BTreeSet<String>) -> Vec<Sample> {
-    samples
-        .iter()
-        .map(|sample| Sample {
-            name: sample.name.clone(),
-            kind: sample.kind,
-            tags: sample
-                .tags
-                .iter()
-                .filter(|tag| allow_tags.contains(&tag.key))
-                .cloned()
-                .collect::<Vec<Tag>>(),
-            d10: sample.d10,
-            counter_total: sample.counter_total,
-        })
-        .collect()
 }
 
 #[cfg(test)]

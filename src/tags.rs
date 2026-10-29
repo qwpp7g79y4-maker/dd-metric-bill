@@ -1,18 +1,11 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 
 use crate::parse::{Kind, Sample};
-
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
-struct TagPair {
-    key: String,
-    value: Option<String>,
-}
-
-type Combination = BTreeSet<TagPair>;
+use crate::series::{combo_of, pair, Combo, Interner};
 
 struct Group {
     kind: Kind,
-    combinations: BTreeSet<Combination>,
+    combinations: HashSet<Combo>,
 }
 
 /// One tag key within one metric.
@@ -43,20 +36,23 @@ pub struct MetricTags {
 /// all of them. A metric without tags is omitted.
 #[must_use]
 pub fn tag_breakdown(samples: &[Sample], top: Option<u64>) -> Vec<MetricTags> {
+    let mut interner = Interner::default();
     let mut groups: BTreeMap<(String, u8), Group> = BTreeMap::new();
     for sample in samples {
-        let key = (sample.name.clone(), kind_ord(sample.kind));
+        let key = (sample.name.to_string(), kind_ord(sample.kind));
         let group = groups.entry(key).or_insert_with(|| Group {
             kind: sample.kind,
-            combinations: BTreeSet::new(),
+            combinations: HashSet::new(),
         });
-        group.combinations.insert(tags_of(sample));
+        group
+            .combinations
+            .insert(combo_of(&mut interner, sample, |_| true));
     }
     let limit = top.map(|count| usize::try_from(count).expect("top fits in usize"));
     groups
         .into_iter()
         .filter_map(|((name, _), group)| {
-            let keys = keys_of(&group.combinations, limit);
+            let keys = keys_of(&group.combinations, &interner, limit);
             if keys.is_empty() {
                 None
             } else {
@@ -70,11 +66,15 @@ pub fn tag_breakdown(samples: &[Sample], top: Option<u64>) -> Vec<MetricTags> {
         .collect()
 }
 
-fn keys_of(combinations: &BTreeSet<Combination>, limit: Option<usize>) -> Vec<TagKey> {
+fn keys_of(
+    combinations: &HashSet<Combo>,
+    interner: &Interner,
+    limit: Option<usize>,
+) -> Vec<TagKey> {
     let total = u64::try_from(combinations.len()).expect("number of series fits in u64");
-    let mut keys: Vec<TagKey> = key_names(combinations)
+    let mut keys: Vec<TagKey> = key_ids(combinations)
         .into_iter()
-        .map(|name| contribution(combinations, name, total))
+        .map(|key| contribution(combinations, interner, key, total))
         .collect();
     keys.sort_by(|a, b| {
         b.added
@@ -88,30 +88,38 @@ fn keys_of(combinations: &BTreeSet<Combination>, limit: Option<usize>) -> Vec<Ta
     keys
 }
 
-fn key_names(combinations: &BTreeSet<Combination>) -> BTreeSet<&str> {
+fn key_ids(combinations: &HashSet<Combo>) -> BTreeSet<u32> {
     combinations
         .iter()
-        .flat_map(|combination| combination.iter().map(|tag| tag.key.as_str()))
+        .flat_map(|combination| combination.iter().map(|&(key, _)| key))
         .collect()
 }
 
-fn contribution(combinations: &BTreeSet<Combination>, name: &str, total: u64) -> TagKey {
-    let mut values = BTreeSet::new();
-    let mut without = BTreeSet::new();
+fn contribution(
+    combinations: &HashSet<Combo>,
+    interner: &Interner,
+    key: u32,
+    total: u64,
+) -> TagKey {
+    let mut values = HashSet::new();
+    let mut without: HashSet<Combo> = HashSet::new();
     for combination in combinations {
-        let mut rest = Combination::new();
-        for tag in combination {
-            if tag.key == name {
-                values.insert(tag.value.clone());
-            } else {
-                rest.insert(tag.clone());
+        for &(tag_key, value) in combination.iter() {
+            if tag_key == key {
+                values.insert(value);
             }
         }
-        without.insert(rest);
+        without.insert(
+            combination
+                .iter()
+                .copied()
+                .filter(|&(tag_key, _)| tag_key != key)
+                .collect(),
+        );
     }
     let without_n = u64::try_from(without.len()).expect("number of series fits in u64");
     TagKey {
-        key: name.to_string(),
+        key: interner.text(key).to_string(),
         unique_values: u64::try_from(values.len()).expect("number of values fits in u64"),
         added: total
             .checked_sub(without_n)
@@ -127,17 +135,6 @@ fn kind_ord(kind: Kind) -> u8 {
         Kind::Distribution => 3,
         Kind::Untyped => 4,
     }
-}
-
-fn tags_of(sample: &Sample) -> Combination {
-    sample
-        .tags
-        .iter()
-        .map(|tag| TagPair {
-            key: tag.key.clone(),
-            value: tag.value.clone(),
-        })
-        .collect()
 }
 
 /// Default `--unbounded-threshold`. More unique values than this
@@ -187,7 +184,8 @@ pub struct MetricUnbounded {
 
 struct UnboundedGroup {
     kind: Kind,
-    keys: BTreeMap<String, BTreeSet<Option<String>>>,
+    /// Per key id, the value ids seen (0 for a tag without a value).
+    keys: BTreeMap<u32, HashSet<u32>>,
 }
 
 /// Tag keys that are unbounded.
@@ -197,25 +195,23 @@ struct UnboundedGroup {
 /// The reasons are returned; the values themselves are not.
 #[must_use]
 pub fn unbounded_tags(samples: &[Sample], threshold: u64) -> Vec<MetricUnbounded> {
+    let mut interner = Interner::default();
     let mut groups: BTreeMap<(String, u8), UnboundedGroup> = BTreeMap::new();
     for sample in samples {
-        let key = (sample.name.clone(), kind_ord(sample.kind));
+        let key = (sample.name.to_string(), kind_ord(sample.kind));
         let group = groups.entry(key).or_insert_with(|| UnboundedGroup {
             kind: sample.kind,
             keys: BTreeMap::new(),
         });
         for tag in &sample.tags {
-            group
-                .keys
-                .entry(tag.key.clone())
-                .or_default()
-                .insert(tag.value.clone());
+            let (key, value) = pair(&mut interner, tag);
+            group.keys.entry(key).or_default().insert(value);
         }
     }
     groups
         .into_iter()
         .filter_map(|((name, _), group)| {
-            let keys = unbounded_keys(&group.keys, threshold);
+            let keys = unbounded_keys(&group.keys, &interner, threshold);
             if keys.is_empty() {
                 None
             } else {
@@ -230,32 +226,36 @@ pub fn unbounded_tags(samples: &[Sample], threshold: u64) -> Vec<MetricUnbounded
 }
 
 fn unbounded_keys(
-    keys: &BTreeMap<String, BTreeSet<Option<String>>>,
+    keys: &BTreeMap<u32, HashSet<u32>>,
+    interner: &Interner,
     threshold: u64,
 ) -> Vec<UnboundedTag> {
-    keys.iter()
-        .filter_map(|(key, values)| {
-            let reasons = reasons_of(values, threshold);
+    let mut found: Vec<UnboundedTag> = keys
+        .iter()
+        .filter_map(|(&key, values)| {
+            let reasons = reasons_of(values, interner, threshold);
             if reasons.is_empty() {
                 None
             } else {
                 Some(UnboundedTag {
-                    key: key.clone(),
+                    key: interner.text(key).to_string(),
                     reasons,
                 })
             }
         })
-        .collect()
+        .collect();
+    found.sort_by(|a, b| a.key.cmp(&b.key));
+    found
 }
 
-fn reasons_of(values: &BTreeSet<Option<String>>, threshold: u64) -> Vec<UnboundedReason> {
+fn reasons_of(values: &HashSet<u32>, interner: &Interner, threshold: u64) -> Vec<UnboundedReason> {
     let mut reasons = BTreeSet::new();
     let unique = u64::try_from(values.len()).expect("number of values fits in u64");
     if unique > threshold {
         reasons.insert(UnboundedReason::Threshold);
     }
-    for value in values.iter().flatten() {
-        if let Some(pattern) = pattern_of(value) {
+    for &value in values.iter().filter(|&&value| value != 0) {
+        if let Some(pattern) = pattern_of(interner.text(value - 1)) {
             reasons.insert(pattern);
         }
     }

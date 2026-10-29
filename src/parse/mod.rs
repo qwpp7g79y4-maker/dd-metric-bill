@@ -7,6 +7,7 @@ pub(crate) use json_keys::repeats_top_level_key;
 
 use std::collections::HashSet;
 use std::fmt;
+use std::sync::Arc;
 
 /// Lines already stored.
 ///
@@ -88,7 +89,7 @@ impl std::error::Error for ParseError {}
 /// was placed, per D12, on `name.count`. The source is then B3, not B2.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Sample {
-    pub name: String,
+    pub name: Text,
     pub kind: Kind,
     pub tags: Vec<Tag>,
     pub d10: bool,
@@ -117,16 +118,50 @@ pub enum Kind {
 /// `Env:Prod` and `env:prod` are one tag.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Tag {
-    pub key: String,
-    pub value: Option<String>,
+    pub key: Text,
+    pub value: Option<Text>,
 }
 
 impl Tag {
     pub(crate) fn lowercase(key: String, value: Option<String>) -> Self {
         Self {
-            key: key.to_lowercase(),
-            value: value.map(|value| value.to_lowercase()),
+            key: key.to_lowercase().into(),
+            value: value.map(|value| value.to_lowercase().into()),
         }
+    }
+}
+
+/// A string shared between samples: names, tag keys, and tag values repeat
+/// across a sample, and one copy of each keeps memory in proportion to the
+/// number of distinct strings.
+pub type Text = Arc<str>;
+
+/// Hands out one shared copy per distinct string while a sample is parsed.
+#[derive(Default)]
+pub(crate) struct Pool {
+    seen: HashSet<Text>,
+}
+
+impl Pool {
+    fn share(&mut self, text: &mut Text) {
+        match self.seen.get(&**text) {
+            Some(shared) => *text = Arc::clone(shared),
+            None => {
+                self.seen.insert(Arc::clone(text));
+            }
+        }
+    }
+
+    /// `sample` with every string replaced by the shared copy.
+    pub(crate) fn sample(&mut self, mut sample: Sample) -> Sample {
+        self.share(&mut sample.name);
+        for tag in &mut sample.tags {
+            self.share(&mut tag.key);
+            if let Some(value) = &mut tag.value {
+                self.share(value);
+            }
+        }
+        sample
     }
 }
 
@@ -139,7 +174,7 @@ pub(crate) const HOST_CONFLICT: &str = "host has more than one value";
 /// count. The same value twice is one host. Other keys may repeat.
 pub(crate) fn conflicting_host(tags: &[Tag]) -> bool {
     let mut first: Option<&str> = None;
-    for tag in tags.iter().filter(|tag| tag.key == "host") {
+    for tag in tags.iter().filter(|tag| &*tag.key == "host") {
         let Some(value) = tag.value.as_deref() else {
             continue;
         };

@@ -44,7 +44,7 @@ fn time_names(n: usize) -> (Duration, Duration) {
             name: name.clone(),
             kind: Kind::Count,
             keys: vec![TagKey {
-                key: "env".to_string(),
+                key: "env".into(),
                 unique_values: 1,
                 added: 0,
             }],
@@ -56,11 +56,11 @@ fn time_names(n: usize) -> (Duration, Duration) {
             indexed: 1,
         });
         samples.push(Sample {
-            name,
+            name: name.into(),
             kind: Kind::Count,
             tags: vec![Tag {
-                key: "env".to_string(),
-                value: Some("test".to_string()),
+                key: "env".into(),
+                value: Some("test".into()),
             }],
             d10: false,
             counter_total: false,
@@ -126,13 +126,13 @@ fn duplicate_requests_line_counts_once() {
     let line = "requests:1|c|#env:test\n";
     let samples = parse_dogstatsd(&line.repeat(4)).expect("parse");
     assert_eq!(samples.len(), 1, "a repeated line is one sample");
-    assert_eq!(samples[0].name, "requests");
+    assert_eq!(&*samples[0].name, "requests");
     assert_eq!(samples[0].kind, Kind::Count);
     assert_eq!(
         samples[0].tags,
         vec![Tag {
-            key: "env".to_string(),
-            value: Some("test".to_string()),
+            key: "env".into(),
+            value: Some("test".into()),
         }]
     );
 }

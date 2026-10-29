@@ -7,6 +7,7 @@ All notable changes to this project are documented in this file.
 ### Fixed
 
 - Tags are counted in lowercase, as Datadog stores them: `Env:Prod` and `env:prod` are one series, and `HOST` is the `host` tag. `--allow-tags` keys are lowercased too. Metric names stay case sensitive.
+- Counting uses much less memory and time: names, tag keys, and tag values are stored once, and a series is a short list of ids instead of nested trees of strings. A sample of 900,000 unique series (64 MB) went from about 1.3 GB and 24 seconds to about 370 MB and 10 seconds. There is still no streaming mode.
 
 ### Build
 

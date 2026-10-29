@@ -46,6 +46,7 @@ pub fn parse_jsonl(input: &str) -> Result<Vec<Sample>, ParseError> {
     let input = super::without_bom(input);
     let mut samples = Vec::new();
     let mut seen = super::FirstLines::new();
+    let mut pool = super::Pool::default();
     let mut record = String::new();
     let mut start_line = 1usize;
     let mut depth = 0i32;
@@ -81,7 +82,7 @@ pub fn parse_jsonl(input: &str) -> Result<Vec<Sample>, ParseError> {
         if key.is_empty() || !seen.is_first(key) {
             continue;
         }
-        samples.push(parse_line(key, start_line)?);
+        samples.push(pool.sample(parse_line(key, start_line)?));
     }
     if !record.trim().is_empty() || in_string || escaped || depth != 0 {
         return Err(fail(start_line, Fail::Json));
@@ -149,7 +150,7 @@ fn parse_line(line: &str, line_no: usize) -> Result<Sample, ParseError> {
         return Err(ParseError::new("jsonl", line_no, super::HOST_CONFLICT));
     }
     Ok(Sample {
-        name,
+        name: name.into(),
         kind,
         tags,
         d10: false,
@@ -223,7 +224,7 @@ mod tests {
         let samples = parse_jsonl(input).expect("valid sample");
         let got: Vec<_> = samples
             .iter()
-            .map(|sample| (sample.name.as_str(), sample.kind))
+            .map(|sample| (&*sample.name, sample.kind))
             .collect();
         assert_eq!(
             got,
@@ -238,11 +239,11 @@ mod tests {
             samples[0].tags,
             vec![
                 Tag {
-                    key: "host".to_string(),
-                    value: Some("a".to_string()),
+                    key: "host".into(),
+                    value: Some("a".into()),
                 },
                 Tag {
-                    key: "env".to_string(),
+                    key: "env".into(),
                     value: None,
                 },
             ]
@@ -250,7 +251,7 @@ mod tests {
         assert_eq!(
             samples[1].tags,
             vec![Tag {
-                key: "debug".to_string(),
+                key: "debug".into(),
                 value: None,
             }]
         );
