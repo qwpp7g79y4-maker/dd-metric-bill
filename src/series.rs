@@ -5,6 +5,7 @@
 //! string once and keeping a series as a sorted list of id pairs costs a few
 //! dozen.
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -40,12 +41,22 @@ pub(crate) type Pair = (u32, u32);
 /// A series: its tags as a sorted list of unique pairs.
 pub(crate) type Combo = Box<[Pair]>;
 
+/// `text` in lowercase, borrowed when it already is.
+pub(crate) fn lowered(text: &str) -> Cow<'_, str> {
+    if text.chars().any(char::is_uppercase) {
+        Cow::Owned(text.to_lowercase())
+    } else {
+        Cow::Borrowed(text)
+    }
+}
+
+/// Tags are compared in lowercase, so a tag built by hand counts like a parsed one.
 pub(crate) fn pair(interner: &mut Interner, tag: &Tag) -> Pair {
-    let key = interner.id(&tag.key);
+    let key = interner.id(&lowered(&tag.key));
     let value = tag
         .value
         .as_deref()
-        .map_or(0, |value| interner.id(value) + 1);
+        .map_or(0, |value| interner.id(&lowered(value)) + 1);
     (key, value)
 }
 

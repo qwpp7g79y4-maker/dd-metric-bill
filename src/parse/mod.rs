@@ -115,7 +115,9 @@ pub enum Kind {
 /// Tag from the sample. `value` is `None` when the tag has no value.
 ///
 /// Datadog stores tags in lowercase, so the parsers lowercase key and value:
-/// `Env:Prod` and `env:prod` are one tag.
+/// `Env:Prod` and `env:prod` are one tag. A `Tag` built by hand is not
+/// changed, but counting compares tags in lowercase, so it counts the same as
+/// a parsed one.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Tag {
     pub key: Text,
@@ -170,8 +172,8 @@ pub(crate) const HOST_CONFLICT: &str = "host has more than one value";
 
 /// `true` when `tags` has two or more different values for the key `host`.
 ///
-/// Tags are already lowercase, so `HOST` and `host` are the same key: `HOST:a`
-/// and `host:b` conflict. A tag with no value does not count. The same value
+/// Tags from the parsers are already lowercase, so `HOST` and `host` are the
+/// same key: `HOST:a` and `host:b` conflict. A tag with no value does not count. The same value
 /// twice is one host. Other keys may repeat.
 pub(crate) fn conflicting_host(tags: &[Tag]) -> bool {
     let mut first: Option<&str> = None;

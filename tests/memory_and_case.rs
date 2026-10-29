@@ -123,3 +123,25 @@ fn hosts_differing_only_in_case_are_one_host() {
     let stdout = String::from_utf8(output.stdout).expect("utf-8");
     assert!(stdout.contains("allotment: 100"), "{stdout}");
 }
+
+#[test]
+fn hand_built_tags_count_like_parsed_tags() {
+    use dd_metric_bill::count::count_by_metric;
+    use dd_metric_bill::parse::{parse_dogstatsd, Kind, Sample, Tag};
+
+    let parsed = parse_dogstatsd("m:1|c|#host:a\n").expect("parse");
+    let built = Sample {
+        name: "m".into(),
+        kind: Kind::Count,
+        tags: vec![Tag {
+            key: "HOST".into(),
+            value: Some("A".into()),
+        }],
+        d10: false,
+        counter_total: false,
+    };
+    let mut samples = parsed;
+    samples.push(built);
+    let report = count_by_metric(&samples, 4, 1, false).expect("count");
+    assert_eq!(report.total, 1);
+}

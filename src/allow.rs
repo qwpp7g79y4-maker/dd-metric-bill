@@ -73,7 +73,7 @@ pub fn simulate(
     )?;
     let indexed = count_tags_where(
         samples,
-        |tag| allow_tags.contains(&*tag.key),
+        |tag| allow_tags.contains(&*crate::series::lowered(&tag.key)),
         histogram_aggregates,
         histogram_percentiles,
         percentiles,
