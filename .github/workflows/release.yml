@@ -88,6 +88,8 @@ jobs:
             tests/fixtures/diff-old.dogstatsd \
             tests/fixtures/diff-new.dogstatsd \
             tests/fixtures/empty.dogstatsd \
+            tests/fixtures/quickstart-prices.json \
+            tests/fixtures/quickstart.dogstatsd \
             "dist/$name/tests/fixtures/"
           cd dist
           if [ "${{ runner.os }}" = "Windows" ]; then
@@ -124,6 +126,8 @@ jobs:
           test -f "$name/tests/fixtures/diff-old.dogstatsd"
           test -f "$name/tests/fixtures/diff-new.dogstatsd"
           test -f "$name/tests/fixtures/empty.dogstatsd"
+          test -f "$name/tests/fixtures/quickstart-prices.json"
+          test -f "$name/tests/fixtures/quickstart.dogstatsd"
           test -f "$name/SECURITY.md"
           test -f "$name/QUALITY.md"
           test -f "$name/QUALITY.nl.md"

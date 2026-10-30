@@ -4,11 +4,26 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+The next release will be 0.2.0, because of the breaking changes below.
+
+### Changed
+
+- Breaking: `Sample.name`, `Tag.key`, and `Tag.value` are now `Arc<str>` (the type `parse::Text`) instead of `String`.
+- Breaking: `#HOST:a,HOST:b` (two values that are the same `host` key after lowercasing) now exits with 2, like `#host:a,host:b`.
+- Counting lowercases tags, so a `Sample` built through the public API with `HOST:a` counts the same as a parsed `host:a`. The tags in the `Sample` are not changed.
+- `unique_hosts` and the `host` conflict check lowercase key and value with the same rule, so a hand-built `HOST:A` is the host `a` and `HOST:a` with `host:b` conflicts. Tags that only change as titlecase letters (such as U+01C5) are lowercased too.
+
+### Fixed
+
+- Tags are counted in lowercase, as Datadog stores them: `Env:Prod` and `env:prod` are one series, and `HOST` is the `host` tag. `--allow-tags` keys are lowercased too. Metric names stay case sensitive.
+- Counting uses much less memory and time: names, tag keys, and tag values are stored once, and a series is a short list of ids instead of nested trees of strings. A sample of 900,000 unique series (64 MB) went from about 1.3 GB and 24 seconds to about 370 MB and 10 seconds. There is still no streaming mode.
+
 ### Build
 
 - A `fuzz/` crate (cargo-fuzz) covers every parser, the price and cost calculation, the allow-list simulation, diff, and render to text and JSON; a cheap nightly build-only CI job keeps it compiling.
 - Property tests (proptest) check that parsers never panic on arbitrary bytes, that the cost calculation matches plain arithmetic, and that `count` and `diff` output stays stable and its JSON always parses.
 - More edge-case tests: a lone CR, a very long line, NUL bytes, Unicode whitespace and lookalike letters, and numbers such as `1e309` and `-0`.
+- The FIFO sample test is `#[cfg(unix)]`, because `mkfifo` does not exist on Windows and that test failed Windows CI.
 
 ## [0.1.2] - 2026-10-14
 

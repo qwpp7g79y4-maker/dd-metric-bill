@@ -87,6 +87,7 @@ pub fn parse_prometheus(input: &str) -> Result<Vec<Sample>, ParseError> {
     let mut types: BTreeMap<String, Family> = BTreeMap::new();
     let mut samples = Vec::new();
     let mut seen = super::FirstLines::new();
+    let mut pool = super::Pool::default();
     for (idx, raw) in input.lines().enumerate() {
         let line_no = idx + 1;
         let line = raw.trim();
@@ -113,7 +114,7 @@ pub fn parse_prometheus(input: &str) -> Result<Vec<Sample>, ParseError> {
         }
         let mapped = resolve(&name, &types).map_err(|reason| fail(line_no, reason))?;
         if let Some(sample) = to_sample(mapped, tags) {
-            samples.push(sample);
+            samples.push(pool.sample(sample));
         }
     }
     Ok(samples)
@@ -196,7 +197,7 @@ fn to_sample(mapped: Mapped<'_>, tags: Vec<Tag>) -> Option<Sample> {
         Mapped::Gauge(base) => plain(base, Kind::Gauge, tags),
         Mapped::Untyped(base) => plain(base, Kind::Untyped, tags),
         Mapped::CounterTotal(base) => Sample {
-            name: format!("{base}.count"),
+            name: format!("{base}.count").into(),
             kind: Kind::Count,
             tags,
             d10: false,
@@ -209,7 +210,7 @@ fn to_sample(mapped: Mapped<'_>, tags: Vec<Tag>) -> Option<Sample> {
                 Suffix::Bucket => ("bucket", false),
             };
             Sample {
-                name: format!("{base}.{part}"),
+                name: format!("{base}.{part}").into(),
                 kind: Kind::Count,
                 tags: if without_le {
                     without(tags, "le")
@@ -221,21 +222,21 @@ fn to_sample(mapped: Mapped<'_>, tags: Vec<Tag>) -> Option<Sample> {
             }
         }
         Mapped::SummaryQuantile(base) => Sample {
-            name: format!("{base}.quantile"),
+            name: format!("{base}.quantile").into(),
             kind: Kind::Gauge,
             tags,
             d10: true,
             counter_total: false,
         },
         Mapped::SummarySum(base) => Sample {
-            name: format!("{base}.sum"),
+            name: format!("{base}.sum").into(),
             kind: Kind::Count,
             tags: without(tags, "quantile"),
             d10: true,
             counter_total: false,
         },
         Mapped::SummaryCount(base) => Sample {
-            name: format!("{base}.count"),
+            name: format!("{base}.count").into(),
             kind: Kind::Count,
             tags: without(tags, "quantile"),
             d10: true,
@@ -246,7 +247,7 @@ fn to_sample(mapped: Mapped<'_>, tags: Vec<Tag>) -> Option<Sample> {
 
 fn plain(name: &str, kind: Kind, tags: Vec<Tag>) -> Sample {
     Sample {
-        name: name.to_string(),
+        name: name.into(),
         kind,
         tags,
         d10: false,
@@ -255,7 +256,7 @@ fn plain(name: &str, kind: Kind, tags: Vec<Tag>) -> Sample {
 }
 
 fn without(tags: Vec<Tag>, key: &str) -> Vec<Tag> {
-    tags.into_iter().filter(|tag| tag.key != key).collect()
+    tags.into_iter().filter(|tag| &*tag.key != key).collect()
 }
 
 fn without_suffix<'a>(name: &'a str, suffix: &str) -> Option<&'a str> {
@@ -335,7 +336,7 @@ fn parse_labels(input: &str) -> Result<(Vec<Tag>, &str), Fail> {
         rest = after_is.trim_start();
         let (value, after_value) = parse_quoted(rest)?;
         let value = if value.is_empty() { None } else { Some(value) };
-        tags.push(Tag { key, value });
+        tags.push(Tag::lowercase(key, value));
         rest = after_value.trim_start();
         // `label_pairs = label_pair { "," label_pair } [ "," ]`: the trailing comma is allowed.
         if let Some(after_comma) = rest.strip_prefix(',') {
@@ -495,24 +496,24 @@ jobs_count{host=\"a\"} 1
 ";
         let samples = parse_prometheus(input).expect("valid sample");
         assert_eq!(samples.len(), 3);
-        assert_eq!(samples[0].name, "page_views");
+        assert_eq!(&*samples[0].name, "page_views");
         assert_eq!(samples[0].kind, Kind::Count);
         assert_eq!(
             samples[0].tags,
             vec![
                 Tag {
-                    key: "host".to_string(),
-                    value: Some("a".to_string()),
+                    key: "host".into(),
+                    value: Some("a".into()),
                 },
                 Tag {
-                    key: "path".to_string(),
-                    value: Some("a\"b".to_string()),
+                    key: "path".into(),
+                    value: Some("a\"b".into()),
                 },
             ]
         );
         assert_eq!(samples[1].kind, Kind::Gauge);
-        assert_eq!(samples[1].tags[0].key, "le");
-        assert_eq!(samples[2].name, "jobs_count");
+        assert_eq!(&*samples[1].tags[0].key, "le");
+        assert_eq!(&*samples[2].name, "jobs_count");
         assert_eq!(samples[2].kind, Kind::Count);
     }
 
@@ -540,8 +541,8 @@ http.duration_sum{host=\"b\",path=\"/y\"} 8
         for sample in &samples {
             assert!(sample.d10);
             assert_eq!(sample.kind, Kind::Count);
-            let has_le = sample.tags.iter().any(|tag| tag.key == "le");
-            match sample.name.as_str() {
+            let has_le = sample.tags.iter().any(|tag| &*tag.key == "le");
+            match &*sample.name {
                 "http.duration.bucket" => assert!(has_le),
                 "http.duration.count" | "http.duration.sum" => assert!(!has_le),
                 other => panic!("unexpected metric {other}"),
@@ -587,8 +588,8 @@ rpc.latency_count{host=\"b\",method=\"post\"} 3
         assert_eq!(samples.len(), 10);
         for sample in &samples {
             assert!(sample.d10);
-            let has_quantile = sample.tags.iter().any(|tag| tag.key == "quantile");
-            match sample.name.as_str() {
+            let has_quantile = sample.tags.iter().any(|tag| &*tag.key == "quantile");
+            match &*sample.name {
                 "rpc.latency.quantile" => {
                     assert_eq!(sample.kind, Kind::Gauge);
                     assert!(has_quantile);
@@ -643,12 +644,12 @@ ok{host=\"a\"} 1
         assert_eq!(samples.len(), 4);
         assert!(samples
             .iter()
-            .filter(|sample| sample.name != "ok")
+            .filter(|sample| &*sample.name != "ok")
             .all(|sample| sample.kind == Kind::Untyped && !sample.d10));
         assert_eq!(
             samples
                 .iter()
-                .find(|sample| sample.name == "ok")
+                .find(|sample| &*sample.name == "ok")
                 .expect("ok")
                 .kind,
             Kind::Count
@@ -729,7 +730,7 @@ bar_count{host=\"a\"} 2
         assert_eq!(samples.len(), 6);
         let kinds: Vec<_> = samples
             .iter()
-            .map(|sample| (sample.name.as_str(), sample.kind, sample.d10))
+            .map(|sample| (&*sample.name, sample.kind, sample.d10))
             .collect();
         assert_eq!(
             kinds,

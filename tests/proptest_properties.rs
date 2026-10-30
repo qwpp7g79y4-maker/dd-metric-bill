@@ -32,7 +32,10 @@ fn kind_strategy() -> impl Strategy<Value = Kind> {
 }
 
 fn tag_strategy() -> impl Strategy<Value = Tag> {
-    (small_string(), prop::option::of(small_string())).prop_map(|(key, value)| Tag { key, value })
+    (small_string(), prop::option::of(small_string())).prop_map(|(key, value)| Tag {
+        key: key.into(),
+        value: value.map(Into::into),
+    })
 }
 
 fn sample_strategy() -> impl Strategy<Value = Sample> {
@@ -44,7 +47,7 @@ fn sample_strategy() -> impl Strategy<Value = Sample> {
         any::<bool>(),
     )
         .prop_map(|(name, kind, tags, d10, counter_total)| Sample {
-            name,
+            name: name.into(),
             kind,
             tags,
             d10,

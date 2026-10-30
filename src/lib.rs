@@ -4,4 +4,5 @@ pub mod count;
 pub mod diff;
 pub mod parse;
 pub mod render;
+mod series;
 pub mod tags;

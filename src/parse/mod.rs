@@ -5,8 +5,12 @@ mod prometheus;
 
 pub(crate) use json_keys::repeats_top_level_key;
 
+use std::borrow::Cow;
 use std::collections::HashSet;
 use std::fmt;
+use std::sync::Arc;
+
+use crate::series::lowered;
 
 /// Lines already stored.
 ///
@@ -88,7 +92,7 @@ impl std::error::Error for ParseError {}
 /// was placed, per D12, on `name.count`. The source is then B3, not B2.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Sample {
-    pub name: String,
+    pub name: Text,
     pub kind: Kind,
     pub tags: Vec<Tag>,
     pub d10: bool,
@@ -112,10 +116,58 @@ pub enum Kind {
 }
 
 /// Tag from the sample. `value` is `None` when the tag has no value.
+///
+/// Datadog stores tags in lowercase, so the parsers lowercase key and value:
+/// `Env:Prod` and `env:prod` are one tag. A `Tag` built by hand is not
+/// changed, but counting compares tags in lowercase, so it counts the same as
+/// a parsed one.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Tag {
-    pub key: String,
-    pub value: Option<String>,
+    pub key: Text,
+    pub value: Option<Text>,
+}
+
+impl Tag {
+    pub(crate) fn lowercase(key: String, value: Option<String>) -> Self {
+        Self {
+            key: key.to_lowercase().into(),
+            value: value.map(|value| value.to_lowercase().into()),
+        }
+    }
+}
+
+/// A string shared between samples: names, tag keys, and tag values repeat
+/// across a sample, and one copy of each keeps memory in proportion to the
+/// number of distinct strings.
+pub type Text = Arc<str>;
+
+/// Hands out one shared copy per distinct string while a sample is parsed.
+#[derive(Default)]
+pub(crate) struct Pool {
+    seen: HashSet<Text>,
+}
+
+impl Pool {
+    fn share(&mut self, text: &mut Text) {
+        match self.seen.get(&**text) {
+            Some(shared) => *text = Arc::clone(shared),
+            None => {
+                self.seen.insert(Arc::clone(text));
+            }
+        }
+    }
+
+    /// `sample` with every string replaced by the shared copy.
+    pub(crate) fn sample(&mut self, mut sample: Sample) -> Sample {
+        self.share(&mut sample.name);
+        for tag in &mut sample.tags {
+            self.share(&mut tag.key);
+            if let Some(value) = &mut tag.value {
+                self.share(value);
+            }
+        }
+        sample
+    }
 }
 
 /// One line carried two different values of the key `host`.
@@ -123,16 +175,18 @@ pub(crate) const HOST_CONFLICT: &str = "host has more than one value";
 
 /// `true` when `tags` has two or more different values for the key `host`.
 ///
-/// The key is `host`. `HOST` is a different key. A tag with no value does not
-/// count. The same value twice is one host. Other keys may repeat.
+/// Key and value are compared in lowercase, so `HOST` and `host` are the same
+/// key and `HOST:a` and `host:b` conflict, also in tags built by hand. A tag
+/// with no value does not count. The same value twice is one host. Other keys
+/// may repeat.
 pub(crate) fn conflicting_host(tags: &[Tag]) -> bool {
-    let mut first: Option<&str> = None;
-    for tag in tags.iter().filter(|tag| tag.key == "host") {
-        let Some(value) = tag.value.as_deref() else {
+    let mut first: Option<Cow<str>> = None;
+    for tag in tags.iter().filter(|tag| lowered(&tag.key) == "host") {
+        let Some(value) = tag.value.as_deref().map(lowered) else {
             continue;
         };
-        if let Some(seen) = first {
-            if seen != value {
+        if let Some(seen) = &first {
+            if *seen != value {
                 return true;
             }
         } else {
@@ -141,6 +195,9 @@ pub(crate) fn conflicting_host(tags: &[Tag]) -> bool {
     }
     false
 }
+
+#[cfg(test)]
+mod conflict_tests;
 
 #[cfg(test)]
 mod tests {

@@ -119,17 +119,17 @@ enum Command {
     /// Count billable custom metrics in one or more samples.
     #[command(after_help = AFTER_HELP)]
     Count {
-        /// Sample file.
+        /// Sample file. `-` reads standard input.
         #[arg(value_name = "SAMPLE", required = true)]
         samples: Vec<PathBuf>,
     },
     /// Compare two samples.
     #[command(after_help = AFTER_HELP)]
     Diff {
-        /// Old sample.
+        /// Old sample. `-` reads standard input.
         #[arg(value_name = "OLD")]
         old: PathBuf,
-        /// New sample.
+        /// New sample. `-` reads standard input.
         #[arg(value_name = "NEW")]
         new: PathBuf,
     },
@@ -416,7 +416,11 @@ fn read_samples(
     format: Format,
     untyped_as: Option<UntypedAs>,
 ) -> Result<Vec<Sample>, u8> {
-    let text = read_text(path, "sample")?;
+    let text = if path == Path::new("-") {
+        read_stdin_text("sample")?
+    } else {
+        read_text(path, "sample")?
+    };
     match parse_format(format, &text) {
         Ok(mut samples) => {
             if let Some(chosen) = untyped_as {
@@ -463,6 +467,18 @@ fn read_text(path: &Path, kind: &str) -> Result<String, u8> {
         Ok(_) => Ok(text),
         Err(err) => {
             refuse_read(kind, path, err);
+            Err(EXIT_INPUT)
+        }
+    }
+}
+
+/// Reads all of standard input as text, for the sample path `-`.
+fn read_stdin_text(kind: &str) -> Result<String, u8> {
+    let mut text = String::new();
+    match io::stdin().lock().read_to_string(&mut text) {
+        Ok(_) => Ok(text),
+        Err(err) => {
+            refuse_read(kind, Path::new("-"), err);
             Err(EXIT_INPUT)
         }
     }

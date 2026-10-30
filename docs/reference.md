@@ -73,7 +73,7 @@ DogStatsD types: `c` count, `g` gauge, `h` histogram, `d` distribution, `ms` his
 
 **Allotment.** Pro is 100 per host, Enterprise is 200 per host (B1, Allocation). Hosts come from `--hosts` or from the distinct `host` values in the sample. Without an allowlist the usage is the total, which is indexed, and the text says `usage: N (total, indexed)`. With an allowlist, indexed and ingested are each set against the allotment. Surplus is 0 when usage is not above the allotment.
 
-**One host per line.** Hosts are the distinct values of the key `host`. The key `HOST` is a different key. One line may carry one value of `host`. Two different values on that line are invalid (exit 2). DogStatsD: `m:1|c|#host:a,host:b`. JSON lines: `"tags":["host:a","host:b"]`. Prometheus: `{host="a",host="b"}`. The reason is `host has more than one value`. The message names the format and the line number. The same value twice (`host:a,host:a`) is one host. Other keys may repeat on one line, as Datadog allows. Spaces around a tag are ignored, and the order of the two host values does not matter.
+**One host per line.** Hosts are the distinct values of the key `host`. Tags are lowercased, as Datadog stores them, so `HOST` is the key `host` and `Env:Prod` equals `env:prod`. Metric names stay case sensitive. One line may carry one value of `host`. Two different values on that line are invalid (exit 2). DogStatsD: `m:1|c|#host:a,host:b`. JSON lines: `"tags":["host:a","host:b"]`. Prometheus: `{host="a",host="b"}`. The reason is `host has more than one value`. The message names the format and the line number. The same value twice (`host:a,host:a`) is one host. Other keys may repeat on one line, as Datadog allows. Spaces around a tag are ignored, and the order of the two host values does not matter.
 
 **Tags.** Per key: how many distinct values it has, and how many series disappear when that key is removed (`added`). `--top N` keeps the N keys with the largest `added`. Keys sort by `added`, then by number of values, then by name.
 
@@ -132,6 +132,8 @@ Each metric has `name`, `type`, `combinations`, `count`, `rule`, and `rule_text`
 When stdout cannot take the report, stderr is `could not write the report: REASON` and the exit code is 2. `--help` and `--version` that cannot be written exit 3, and stderr is `could not write the message: REASON`. A failed write does not panic.
 
 A sample and a price file must be regular files. The path is opened without waiting, and only that opened file is read. A symlink is followed. A directory, FIFO, device, or other non-regular path is not read, so a FIFO with no writer does not hang. The type comes from the opened file, so a path that becomes a FIFO does not make the read wait. The message is `cannot read sample: PATH: REASON` or `cannot read price file: PATH: REASON`, and `REASON` includes `not a regular file` when the path is not a regular file.
+
+A path of `-` for `count` or `diff` reads standard input.
 
 A price file that is not valid JSON, not an object, or has a bad field prints `invalid price file: PATH: DETAIL`. `DETAIL` is one of: `not valid json`, `not an object`, `missing field: FIELD`, `empty field: FIELD`, `field is not text: FIELD`, `field is not a number: FIELD`, `field is negative: FIELD`, `field is too large: FIELD`, `unknown field`. A key repeated at the top level prints `price file has a duplicate key` and nothing else: no path and no file text.
 
