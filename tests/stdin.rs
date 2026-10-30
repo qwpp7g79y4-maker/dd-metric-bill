@@ -168,8 +168,22 @@ fn empty_stdin_matches_empty_file() {
 
 /// `--prices -` is out of scope: only the sample path reads `-`. A FIFO is
 /// unaffected by the stdin feature and keeps the existing rejection.
+#[cfg(unix)]
 #[test]
 fn fifo_sample_is_still_rejected_unlike_stdin() {
+    let src = include_str!("stdin.rs");
+    assert!(
+        src.contains("#[cfg(unix)]\n#[test]\nfn fifo_sample_is_still_rejected_unlike_stdin()"),
+        "#[cfg(unix)] must sit directly above this test"
+    );
+    let notes = include_str!("../CHANGELOG.md");
+    let unreleased = notes.split("## [0.1.2]").next().expect("unreleased");
+    assert!(
+        unreleased.contains(
+            "The FIFO sample test is `#[cfg(unix)]`, because `mkfifo` does not exist on Windows and that test failed Windows CI."
+        ),
+        "changelog line under the current version"
+    );
     let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join("stdin-fifo-dir");
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).expect("dir");
