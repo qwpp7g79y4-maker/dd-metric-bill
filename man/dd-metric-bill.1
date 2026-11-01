@@ -1,0 +1,120 @@
+.TH DD-METRIC-BILL 1 "November 2026" "dd-metric-bill 0.1.2" "User Commands"
+.SH NAME
+dd-metric-bill \- estimate the number of billable Datadog custom metrics in a sample
+.SH SYNOPSIS
+.nf
+Usage: dd-metric-bill [OPTIONS] <COMMAND>
+Usage: dd-metric-bill count [OPTIONS] <SAMPLE>...
+Usage: dd-metric-bill diff [OPTIONS] <OLD> <NEW>
+.fi
+.SH DESCRIPTION
+Estimate the number of billable Datadog custom metrics in a sample.
+.PP
+The top-level help lists two commands.
+.TP
+.B count
+Count billable custom metrics in one or more samples.
+.I SAMPLE
+is a sample file. \- reads standard input. At least one sample is required.
+.TP
+.B diff
+Compare two samples.
+.I OLD
+is the old sample. \- reads standard input.
+.I NEW
+is the new sample. \- reads standard input.
+.PP
+.nh
+Contracts with Metric Name pricing are not supported.
+Only count accepts --explain, --plan, --hosts, --allow-tags, --prices and --unbounded-threshold.
+--hosts only works together with --plan.
+--untyped-as only works together with --format prometheus.
+.hy
+.PP
+The same options are printed by
+.BR dd-metric-bill\ --help ,
+by
+.BR "dd-metric-bill count --help" ,
+and by
+.BR "dd-metric-bill diff --help" ,
+except
+.BR --version ,
+which only the top-level help lists.
+Passing an option that count accepts and diff does not accept makes diff exit 3, before it reads a sample or a price file.
+.SH OPTIONS
+.TP
+.B --format \fIFORMAT\fR
+Input format: dogstatsd, jsonl or prometheus. The default is dogstatsd. Possible values: dogstatsd, jsonl, prometheus.
+.TP
+.B --json
+Write the output as JSON.
+.TP
+.B --explain
+Show the rule and the source for each metric. Only count accepts this option.
+.TP
+.B --hosts \fIN\fR
+Number of hosts for the allotment. Only count accepts this option, and only together with --plan.
+.TP
+.B --plan \fIPLAN\fR
+Plan for the allotment: pro or enterprise. Possible values: pro, enterprise. Only count accepts this option.
+.TP
+.B --histogram-aggregates \fIN\fR
+Number of histogram aggregates per tag combination. The default is 4.
+.TP
+.B --histogram-percentiles \fIN\fR
+Number of histogram percentiles per tag combination. The default is 1.
+.TP
+.B --percentiles
+Include percentiles for distribution metrics.
+.TP
+.B --allow-tags \fILIST\fR
+Comma-separated tag keys that may be indexed. Only count accepts this option.
+.TP
+.B --prices \fIFILE\fR
+Path to a price file (JSON). Only count accepts this option.
+.TP
+.B --budget \fIN\fR
+Fail if the number of custom metrics is above N. For diff, N is compared with the new total.
+.TP
+.B --top \fIN\fR
+Number of tag keys in the breakdown.
+.TP
+.B --unbounded-threshold \fIN\fR
+Unique values above N mark an unbounded tag. The default is 50. Only count accepts this option. On diff, passing the flag is rejected even when the value is the default.
+.TP
+.B --untyped-as \fIKIND\fR
+Count Prometheus metrics without a type as gauge or count. Possible values: gauge, count. This option only works together with --format prometheus.
+.TP
+.B -h , --help
+Print help. Exit 0 when the help text can be written.
+.TP
+.B -V , --version
+Print version. Exit 0 when the version text can be written. Shown by the top-level help only.
+.SH EXIT STATUS
+.TP
+.B 0
+The report was printed, or help or version was printed. With --budget, the total (for diff, the new total) is not above N.
+.TP
+.B 1
+--budget was exceeded. The report is still printed on standard output. Standard error is one line: budget exceeded: TOTAL > LIMIT.
+.TP
+.B 2
+The sample or the price file cannot be read or is invalid, or the report cannot be written. A failed report write does not panic.
+.TP
+.B 3
+Usage error, including an unknown option, a missing argument, or an option combination the help text rejects. Standard output is empty. --help and --version that cannot be written also exit 3, and that failure does not panic.
+.SH EXAMPLES
+Count the fictional DogStatsD sample shipped in this repository. The default format is dogstatsd, so --format is not required. The exit code is 0.
+.PP
+.nf
+.B dd-metric-bill count examples/page.dogstatsd
+.fi
+.PP
+The three help texts, and the version. Each exits 0 when it can be written.
+.PP
+.nf
+.B dd-metric-bill --help
+.B dd-metric-bill count --help
+.B dd-metric-bill diff --help
+.B dd-metric-bill --version
+.fi

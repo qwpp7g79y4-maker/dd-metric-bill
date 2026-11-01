@@ -6,6 +6,10 @@ All notable changes to this project are documented in this file.
 
 The next release will be 0.2.0, because of the breaking changes below.
 
+### Added
+
+- Manual page `man/dd-metric-bill.1`, and a fictional DogStatsD sample under `examples/` with the command and its exit code.
+
 ### Changed
 
 - Breaking: `Sample.name`, `Tag.key`, and `Tag.value` are now `Arc<str>` (the type `parse::Text`) instead of `String`.
