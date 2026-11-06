@@ -7,7 +7,7 @@ Deze pagina laat zien hoe elke release van dd-metric-bill is gecontroleerd, wat 
 | | |
 |---|---|
 | Gecontroleerde commit | [`c0a735b`](https://github.com/qwpp7g79y4-maker/dd-metric-bill/commit/c0a735b) |
-| Tests | 242 automatische tests, gedraaid in debug- en releasemodus en op Rust 1.85 (alle drie: 0 mislukt) |
+| Tests | 266 automatische tests, gedraaid in debug- en releasemodus en op Rust 1.85 (alle drie: 0 mislukt) |
 
 ### Wat is toegevoegd
 
@@ -31,7 +31,7 @@ Deze pagina laat zien hoe elke release van dd-metric-bill is gecontroleerd, wat 
 
 ### Hoe we controleerden
 
-- `cargo test`, `cargo test --release`, en `cargo +1.85 test`: 242 geslaagd, 0 mislukt, bij elke run, exit 0.
+- `cargo test`, `cargo test --release`, en `cargo +1.85 test`: 266 geslaagd, 0 mislukt, bij elke run, exit 0.
 - `cargo clippy --all-targets -- -D warnings`: exit 0. `cargo fmt --check`, in de hoofdcrate en in `fuzz/`: exit 0.
 - `cargo +nightly fuzz build`: exit 0.
 - Elk van de 7 fuzz-targets draaide 660 seconden op één vastgezette CPU-kern, achter elkaar (in totaal ongeveer 77 minuten):
