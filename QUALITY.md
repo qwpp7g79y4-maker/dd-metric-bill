@@ -6,8 +6,8 @@ This page shows how each release of dd-metric-bill was checked, what we found, a
 
 | | |
 |---|---|
-| Commit checked | [`fd7a599`](https://github.com/qwpp7g79y4-maker/dd-metric-bill/commit/fd7a599) |
-| Tests | 266 automated tests, run in debug and release mode and on Rust 1.85 (all three: 0 failed) |
+| Commit checked | [`09d370a`](https://github.com/qwpp7g79y4-maker/dd-metric-bill/commit/09d370a) |
+| Tests | 268 automated tests, run in debug mode with the default toolchain (268 passed, 0 failed, 0 ignored) |
 
 ### What was added
 
@@ -31,8 +31,8 @@ This page shows how each release of dd-metric-bill was checked, what we found, a
 
 ### How we checked
 
-- `cargo test`, `cargo test --release`, and `cargo +1.85 test`: 266 passed, 0 failed, each run, exit 0.
-- `cargo clippy --all-targets -- -D warnings`: exit 0. `cargo fmt --check`, in the main crate and in `fuzz/`: exit 0.
+- `cargo test --no-fail-fast`: 268 passed, 0 failed, 0 ignored, exit 0. Release mode and Rust 1.85 were not run for this commit.
+- `cargo clippy --all-targets -- -D warnings`: exit 0. `cargo fmt --check`: exit 0 (the `fuzz/` crate was not checked).
 - `cargo +nightly fuzz build`: exit 0.
 - Each of the 7 fuzz targets ran 660 seconds on one pinned CPU core, sequentially (about 77 minutes in total):
 

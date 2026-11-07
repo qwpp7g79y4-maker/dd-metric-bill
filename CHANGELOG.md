@@ -14,7 +14,7 @@ The next release will be 0.2.0, because of the breaking changes below.
 ### Changed
 
 - Errors on stderr for an unreadable sample or price file, a line that does not parse, an invalid price file, a budget overrun, and a count that does not fit are followed by a `hint:` line that says what you can do. The first line, the stdout, and the exit codes are unchanged.
-- The README states the test count (266), the same number as the quality report.
+- The README states the test count (268), the same number as the quality report.
 - Breaking: `Sample.name`, `Tag.key`, and `Tag.value` are now `Arc<str>` (the type `parse::Text`) instead of `String`.
 - Breaking: `#HOST:a,HOST:b` (two values that are the same `host` key after lowercasing) now exits with 2, like `#host:a,host:b`.
 - Counting lowercases tags, so a `Sample` built through the public API with `HOST:a` counts the same as a parsed `host:a`. The tags in the `Sample` are not changed.
