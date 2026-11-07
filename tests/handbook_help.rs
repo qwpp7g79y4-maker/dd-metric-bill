@@ -5,11 +5,7 @@ use std::path::PathBuf;
 use std::process::Command;
 
 fn binary() -> Command {
-    // Cargo 1.99 keeps the hyphen: CARGO_BIN_EXE_dd-metric-bill.
-    // Older Cargo spelled that variable CARGO_BIN_EXE_dd_metric_bill.
-    let path = std::env::var("CARGO_BIN_EXE_dd_metric_bill").unwrap_or_else(|_| {
-        std::env::var("CARGO_BIN_EXE_dd-metric-bill").expect("CARGO_BIN_EXE_dd_metric_bill")
-    });
+    let path = env!("CARGO_BIN_EXE_dd-metric-bill");
     let mut cmd = Command::new(path);
     cmd.current_dir(env!("CARGO_MANIFEST_DIR"));
     cmd
