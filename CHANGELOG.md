@@ -8,10 +8,12 @@ The next release will be 0.2.0, because of the breaking changes below.
 
 ### Added
 
+- `README.md` and `README.nl.md` have Example and Options sections; every option of `--help` is in both. `examples/` has two more fictional samples (`webshop.dogstatsd`, `api-gateway.prom`) with their expected output, compared by `tests/examples.rs`, and the release archive ships `examples/`.
 - Manual page `man/dd-metric-bill.1`, and a fictional DogStatsD sample under `examples/` with the command and its exit code.
 
 ### Changed
 
+- Errors on stderr for an unreadable sample or price file, a line that does not parse, an invalid price file, a budget overrun, and a count that does not fit are followed by a `hint:` line that says what you can do. The first line, the stdout, and the exit codes are unchanged.
 - The README states the test count (266), the same number as the quality report.
 - Breaking: `Sample.name`, `Tag.key`, and `Tag.value` are now `Arc<str>` (the type `parse::Text`) instead of `String`.
 - Breaking: `#HOST:a,HOST:b` (two values that are the same `host` key after lowercasing) now exits with 2, like `#host:a,host:b`.

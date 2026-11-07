@@ -661,7 +661,11 @@ fn histogram_overflow_escapes_the_metric_name_on_stderr() {
     no_raw_control(&output.stdout, "stdout");
     no_raw_control(&output.stderr, "stderr");
     let stderr = String::from_utf8(output.stderr).expect("stderr is utf-8");
-    assert_eq!(stderr.lines().count(), 1, "{stderr:?}");
+    assert_eq!(stderr.lines().count(), 2, "{stderr:?}");
+    assert!(
+        stderr.lines().nth(1).unwrap().starts_with("hint: "),
+        "{stderr:?}"
+    );
     assert!(
         stderr.contains(
             "metric m\\x1b[2J: factor 9223372036854775808 times 2 combinations is too large"
@@ -788,6 +792,8 @@ fn nan_inf_and_inf_per_format() {
         assert_eq!(output.status.code(), Some(2), "{line}{}", failure(&output));
         assert!(output.stdout.is_empty(), "{line}{}", failure(&output));
         let stderr = String::from_utf8(output.stderr).expect("stderr is utf-8");
+        let (stderr, hint) = stderr.split_once("hint: ").expect("stderr has a hint line");
+        assert!(hint.ends_with('\n') && !hint.trim().is_empty(), "{hint:?}");
         assert_eq!(
             stderr, "invalid dogstatsd line 1: value is missing or invalid\n",
             "{line}"
@@ -822,6 +828,8 @@ fn nan_inf_and_inf_per_format() {
         );
         assert!(output.stdout.is_empty(), "{token} {}", failure(&output));
         let stderr = String::from_utf8(output.stderr).expect("stderr is utf-8");
+        let (stderr, hint) = stderr.split_once("hint: ").expect("stderr has a hint line");
+        assert!(!hint.trim().is_empty(), "{hint:?}");
         assert_eq!(stderr, "invalid jsonl line 1: not valid json\n", "{token}");
         assert!(!stderr.contains(marker), "{stderr}");
         assert!(!stderr.contains(token), "{stderr}");

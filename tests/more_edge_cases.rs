@@ -65,6 +65,8 @@ fn lone_cr_stays_embedded_and_breaks_the_shape() {
     let output = run(&["count", "--format", "dogstatsd", dog.path()]);
     assert_eq!(output.status.code(), Some(2), "{}", failure(&output));
     let stderr = String::from_utf8(output.stderr).expect("stderr is utf-8");
+    let (stderr, hint) = stderr.split_once("hint: ").expect("stderr has a hint line");
+    assert!(hint.ends_with('\n') && !hint.trim().is_empty(), "{hint:?}");
     assert_eq!(
         stderr,
         "invalid dogstatsd line 1: type is missing or unknown\n"
@@ -74,6 +76,8 @@ fn lone_cr_stays_embedded_and_breaks_the_shape() {
     let output = run(&["count", "--format", "prometheus", prom.path()]);
     assert_eq!(output.status.code(), Some(2), "{}", failure(&output));
     let stderr = String::from_utf8(output.stderr).expect("stderr is utf-8");
+    let (stderr, hint) = stderr.split_once("hint: ").expect("stderr has a hint line");
+    assert!(!hint.trim().is_empty(), "{hint:?}");
     assert_eq!(stderr, "invalid prometheus line 1: shape is wrong\n");
 }
 

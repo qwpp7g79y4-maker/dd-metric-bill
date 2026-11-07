@@ -187,6 +187,12 @@ fn note(args: std::fmt::Arguments<'_>) {
     let _ = writeln!(err, "{args}");
 }
 
+/// Writes an error line, then a `hint:` line that says what the user can do.
+fn note_hint(args: std::fmt::Arguments<'_>, hint: &str) {
+    let mut err = io::stderr().lock();
+    let _ = writeln!(err, "{args}\nhint: {hint}");
+}
+
 /// Writes the report to stdout. A failed write is exit 2 and does not panic.
 fn write_report(text: &str) -> u8 {
     let mut out = io::stdout().lock();
@@ -359,14 +365,20 @@ fn diff_paths(cli: &Cli, old: &Path, new: &Path) -> u8 {
 }
 
 fn usage_error(err: &CountError) -> u8 {
-    note(format_args!("usage error: {err}"));
+    note_hint(
+        format_args!("usage error: {err}"),
+        "lower the option values, or run dd-metric-bill --help",
+    );
     EXIT_USAGE
 }
 
 fn budget_status(budget: Option<u64>, total: u64) -> u8 {
     match budget {
         Some(limit) if total > limit => {
-            note(format_args!("budget exceeded: {total} > {limit}"));
+            note_hint(
+                format_args!("budget exceeded: {total} > {limit}"),
+                "reduce the number of series (see the tag breakdown), or raise --budget",
+            );
             EXIT_BUDGET
         }
         _ => EXIT_OK,
@@ -378,14 +390,17 @@ fn read_prices(path: &Path) -> Result<Prices, u8> {
     match parse_prices(&text) {
         Ok(prices) => Ok(prices),
         Err(err) if err.is_duplicate_key() => {
-            note(format_args!("{err}"));
+            note_hint(
+                format_args!("{err}"),
+                "remove the repeated key from the price file; see docs/reference.md#price-file",
+            );
             Err(EXIT_INPUT)
         }
         Err(err) => {
-            note(format_args!(
-                "invalid price file: {}: {err}",
-                path.display()
-            ));
+            note_hint(
+                format_args!("invalid price file: {}: {err}", path.display()),
+                "fix the price file; see docs/reference.md#price-file for the format",
+            );
             Err(EXIT_INPUT)
         }
     }
@@ -429,7 +444,7 @@ fn read_samples(
             Ok(samples)
         }
         Err(err) => {
-            note(format_args!("{err}"));
+            note_hint(format_args!("{err}"), parse_hint(format));
             Err(err.exit_code())
         }
     }
@@ -551,10 +566,25 @@ fn open_regular(path: &Path) -> Result<File, ReadFail> {
 }
 
 fn refuse_read(kind: &str, path: &Path, reason: impl std::fmt::Display) {
-    note(format_args!(
-        "cannot read {kind}: {}: {reason}",
-        path.display()
-    ));
+    note_hint(
+        format_args!("cannot read {kind}: {}: {reason}", path.display()),
+        "check that the path exists, is a regular file you may read, or use - for standard input",
+    );
+}
+
+/// What the user can do about a line that does not parse.
+fn parse_hint(format: Format) -> &'static str {
+    match format {
+        Format::Dogstatsd => {
+            "fix that line (name:value|type|#tag:value), or pass --format jsonl or --format prometheus if the sample is in that format"
+        }
+        Format::Jsonl => {
+            "fix that line (one JSON object with metric, type and tags), or drop --format jsonl if the sample is DogStatsD"
+        }
+        Format::Prometheus => {
+            "fix that line (Prometheus text format), or drop --format prometheus if the sample is DogStatsD"
+        }
+    }
 }
 
 fn parse_format(format: Format, text: &str) -> Result<Vec<Sample>, ParseError> {

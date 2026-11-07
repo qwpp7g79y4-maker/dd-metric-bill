@@ -6,7 +6,7 @@ Estimate how many billable Datadog custom metrics a sample produces, offline, be
 
 [![crates.io](https://img.shields.io/crates/v/dd-metric-bill.svg)](https://crates.io/crates/dd-metric-bill) [![downloads](https://img.shields.io/crates/d/dd-metric-bill.svg)](https://crates.io/crates/dd-metric-bill) [![CI](https://github.com/qwpp7g79y4-maker/dd-metric-bill/actions/workflows/ci.yml/badge.svg)](https://github.com/qwpp7g79y4-maker/dd-metric-bill/actions/workflows/ci.yml) [![PEPAI checked](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fqwpp7g79y4-maker%2Fdd-metric-bill%2Fmain%2F.github%2Fbadge.json)](QUALITY.md) [![MSRV 1.85](https://img.shields.io/badge/MSRV-1.85-blue.svg)](https://github.com/qwpp7g79y4-maker/dd-metric-bill/blob/main/Cargo.toml) [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 
-[Installation](#installation) • [Quick start](#quick-start) • [How it counts](#how-it-counts) • [Alternatives](#compared-with-alternatives) • [Limitations](#limitations) • [Reference](docs/reference.md)
+[Installation](#installation) • [Quick start](#quick-start) • [Example](#example) • [Options](#options) • [How it counts](#how-it-counts) • [Alternatives](#compared-with-alternatives) • [Limitations](#limitations) • [Reference](docs/reference.md)
 
 dd-metric-bill is a command-line tool written in Rust. It reads one or more samples on your machine as DogStatsD lines (`name:value|type|#tag:value`), as JSON lines, or as Prometheus text. A custom metric is a unique combination of metric name and tag values, including the `host` tag. Tag order does not count. COUNT, RATE, and GAUGE count as 1 per combination. A histogram counts as 5 per combination by default: 4 aggregates plus 1 percentile. A distribution counts as 5 per combination, or 10 with `--percentiles`. Per tag key it shows how many unique values that key has and how many series it adds. Unbounded tags (too many values, or a pattern such as a UUID) get a reason. `--allow-tags` simulates Metrics without Limits: ingested on all tags, indexed on the allowlist. `diff` compares two samples. `--budget N` exits 1 when the total is above N. `--plan` and `--hosts` show the allotment. `--prices` reads a price file and estimates the cost above the allotment. `--json` writes the same result as JSON. The default output shows keys and counts, not the tag values. Contracts with Metric Name pricing are not supported. Only count accepts --explain, --plan, --hosts, --allow-tags, --prices and --unbounded-threshold. --hosts only works together with --plan. --untyped-as only works together with --format prometheus. It needs no account and makes no network connection. `--histogram-aggregates` (default 4) is the number of histogram aggregates per tag combination, and `--histogram-percentiles` (default 1) is the number of histogram percentiles per tag combination. `--top N` is the number of tag keys in the breakdown.
 
@@ -172,6 +172,63 @@ None of this needs a Datadog API key: it only reads traffic or logs your own app
 `count` and `diff` also read standard input when a sample path is `-`, for example `tail -n 2000 pipeline.jsonl | dd-metric-bill count --format jsonl -`; output and exit code are the same as for a real file with the same bytes.
 
 Prices come only from a JSON file you pass with `--prices`; see [the price file format](docs/reference.md#price-file). Every text output ends with `estimate: Datadog bills the hourly average over the month; this is one snapshot (source: B1)`. All options, exit codes, and error messages are listed in the [reference](docs/reference.md) and in `dd-metric-bill --help`.
+
+## Example
+
+`examples/` holds two realistic but fictional samples and the exact output of the binary for each: `webshop.dogstatsd` (DogStatsD, with a count, a gauge, a histogram, and a distribution tagged by `user_id`) and `api-gateway.prom` (Prometheus text). A test runs both and compares the output with `webshop.expected.txt` and `api-gateway.expected.txt`. See [examples/README.md](examples/README.md).
+
+```console
+$ dd-metric-bill count examples/webshop.dogstatsd
+total: 37
+
+cart.items type: gauge combinations: 3 count: 3 rule: D3
+  tag: host values: 3 added: 2
+  tag: env values: 1 added: 0
+  tag: service values: 1 added: 0
+checkout.completed type: count combinations: 4 count: 4 rule: D3
+  tag: payment values: 3 added: 2
+  tag: region values: 2 added: 1
+  tag: env values: 1 added: 0
+  tag: service values: 1 added: 0
+http.request.duration type: histogram combinations: 3 count: 15 rule: D4
+  tag: route values: 2 added: 1
+  tag: status values: 2 added: 1
+  tag: env values: 1 added: 0
+  tag: service values: 1 added: 0
+search.latency type: distribution combinations: 3 count: 15 rule: D5
+  tag: user_id values: 3 added: 2
+  tag: env values: 1 added: 0
+  tag: service values: 1 added: 0
+
+estimate: Datadog bills the hourly average over the month; this is one snapshot (source: B1)
+```
+
+The 37 is 3 gauge series, 4 count series, 3 histogram series times 5, and 3 distribution series times 5. `user_id` adds 2 series on `search.latency`; give each user its own tag value in production and that number grows with your user base.
+
+## Options
+
+Every option of `dd-metric-bill --help`. The same list is in the [reference](docs/reference.md#options).
+
+| Option | Applies to | What it does |
+| --- | --- | --- |
+| `--format` | count and diff | Input format: `dogstatsd` (default), `jsonl`, or `prometheus`. |
+| `--json` | count and diff | JSON output with `schema_version` 1. Same result as the text output. |
+| `--explain` | count | After each metric, print the rule text and its source URL. |
+| `--hosts` | count, only with `--plan` | Number of hosts for the allotment. Without it, the hosts are the distinct values of the `host` tag. |
+| `--plan` | count | Allotment plan: `pro` (100 custom metrics per host) or `enterprise` (200 per host). |
+| `--histogram-aggregates` | count and diff | Histogram aggregates per tag combination. Default 4. |
+| `--histogram-percentiles` | count and diff | Histogram percentiles per tag combination. Default 1. The histogram factor is the sum of the two. |
+| `--percentiles` | count and diff | Count a distribution as 10 per combination instead of 5. |
+| `--allow-tags` | count | Comma-separated tag keys that may be indexed. Spaces around a key are dropped. Empty pieces are dropped. |
+| `--prices` | count | Path to a price file (JSON). |
+| `--budget` | count and diff | Exit 1 when the total (for `diff`, the new total) is above N. The report is still printed. |
+| `--top` | count and diff | Show only the N tag keys that add the most series, per metric. |
+| `--unbounded-threshold` | count | A tag key with more than N distinct values is unbounded. Default 50. On `diff`, passing the flag is rejected even when the value is 50. |
+| `--untyped-as` | count and diff, only with `--format prometheus` | Count a Prometheus metric that has no type as `gauge` or `count`. |
+| `--help` | everywhere | Show help and exit 0. |
+| `--version` | top level | Show the version (`dd-metric-bill 0.1.2`) and exit 0. |
+
+Only count accepts --explain, --plan, --hosts, --allow-tags, --prices and --unbounded-threshold. --hosts only works together with --plan. --untyped-as only works together with --format prometheus. Exit codes: 0 success, 1 budget exceeded, 2 input or parse error, 3 usage error. Every error on stderr is followed by a `hint:` line that says what you can do.
 
 ## How it counts
 

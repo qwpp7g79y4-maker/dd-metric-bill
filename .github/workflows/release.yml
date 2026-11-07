@@ -82,6 +82,7 @@ jobs:
           cp README.md README.nl.md LICENSE-MIT LICENSE-APACHE THIRD-PARTY-LICENSES.html CHANGELOG.md SECURITY.md QUALITY.md QUALITY.nl.md "dist/$name/"
           cp -R docs "dist/$name/"
           cp -R prices "dist/$name/"
+          cp -R examples "dist/$name/"
           mkdir -p "dist/$name/tests/fixtures"
           cp tests/fixtures/b1-count.dogstatsd \
             tests/fixtures/b1-histogram.dogstatsd \
@@ -133,6 +134,7 @@ jobs:
           test -f "$name/QUALITY.nl.md"
           test -f "$name/THIRD-PARTY-LICENSES.html"
           test -f "$name/prices/datadog-example.json"
+          test -f "$name/examples/README.md"
           if [ "${{ runner.os }}" = "Windows" ]; then
             total=$(cd "$name" && ./dd-metric-bill.exe count tests/fixtures/b1-count.dogstatsd | head -n 1 | tr -d '\r')
           else

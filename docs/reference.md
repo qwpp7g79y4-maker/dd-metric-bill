@@ -122,6 +122,8 @@ Each metric has `name`, `type`, `combinations`, `count`, `rule`, and `rule_text`
 
 ## Exit codes and usage errors
 
+Besides exit 3 usage errors, an error for an unreadable file, a line that does not parse, an invalid price file, an exceeded budget, or a count that does not fit has a second stderr line that starts with `hint:` and says what you can do. The first line is the message described in this page.
+
 | Code | Meaning |
 | --- | --- |
 | 0 | The report was printed. With `--budget`, the total is not above N. |

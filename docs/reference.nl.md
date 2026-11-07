@@ -124,6 +124,8 @@ Elke metric heeft `name`, `type`, `combinations`, `count`, `rule` en `rule_text`
 
 ## Exitcodes en gebruiksfouten
 
+Bij een onleesbaar bestand, een regel die niet parseert, een ongeldig prijsbestand, een overschreden budget of een telling die niet past staat op stderr een tweede regel die met `hint:` begint en zegt wat je kunt doen. De eerste regel is de melding zoals op deze pagina beschreven.
+
 | Code | Betekenis |
 | --- | --- |
 | 0 | Het verslag is geschreven. Met `--budget` ligt het totaal niet boven N. |

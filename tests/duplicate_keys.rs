@@ -71,6 +71,8 @@ fn assert_stderr(output: &Output, expected: &str, body: &str, call: &str) {
         failure(output)
     );
     let stderr = String::from_utf8(output.stderr.clone()).expect("stderr is utf-8");
+    let (stderr, hint) = stderr.split_once("hint: ").expect("stderr has a hint line");
+    assert!(hint.ends_with('\n') && !hint.trim().is_empty(), "{hint:?}");
     assert_eq!(stderr, expected, "{call} {body:?}");
     for line in body.lines().map(str::trim).filter(|line| !line.is_empty()) {
         assert!(

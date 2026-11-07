@@ -1,0 +1,17 @@
+# HELP gateway_requests_total Requests handled by the gateway.
+# TYPE gateway_requests_total counter
+gateway_requests_total{method="GET",route="/v1/orders",code="200"} 1027
+gateway_requests_total{method="GET",route="/v1/orders",code="404"} 12
+gateway_requests_total{method="POST",route="/v1/orders",code="201"} 311
+gateway_requests_total{method="POST",route="/v1/orders",code="500"} 2
+# HELP gateway_inflight Requests being handled now.
+# TYPE gateway_inflight gauge
+gateway_inflight{instance="gw-1"} 4
+gateway_inflight{instance="gw-2"} 7
+# HELP gateway_latency_seconds Request latency.
+# TYPE gateway_latency_seconds histogram
+gateway_latency_seconds_bucket{route="/v1/orders",le="0.1"} 900
+gateway_latency_seconds_bucket{route="/v1/orders",le="0.5"} 1200
+gateway_latency_seconds_bucket{route="/v1/orders",le="+Inf"} 1352
+gateway_latency_seconds_sum{route="/v1/orders"} 143.2
+gateway_latency_seconds_count{route="/v1/orders"} 1352
