@@ -43,6 +43,8 @@ From a local clone: `cargo install --locked --path .`, or `cargo build --release
 
 The binaries are built and smoke-tested on GitHub-hosted runners (Ubuntu, macOS, Windows). Building from source needs Rust 1.85 or newer on any platform Rust supports.
 
+The test suite has 266 automated tests; see [QUALITY.md](QUALITY.md) for how they were run.
+
 ## Quick start
 
 These are the real outputs of the binary on the synthetic fixtures in `tests/fixtures`. A test runs every example and compares the output. The release archive includes these fixtures, so the same commands work in the unpacked directory.

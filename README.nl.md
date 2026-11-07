@@ -43,6 +43,8 @@ Vanuit een lokale clone: `cargo install --locked --path .`, of `cargo build --re
 
 De binaries worden gebouwd en met een rooktest gecontroleerd op runners van GitHub (Ubuntu, macOS, Windows). Bouwen vanuit de broncode vraagt Rust 1.85 of nieuwer op elk platform dat Rust ondersteunt.
 
+De testsuite heeft 266 automatische tests; zie [QUALITY.nl.md](QUALITY.nl.md) voor hoe ze zijn gedraaid.
+
 ## Snel aan de slag
 
 Dit is de echte uitvoer van de binary op de synthetische fixtures in `tests/fixtures`. Een test draait elk voorbeeld en vergelijkt de uitvoer. Het release-archief bevat deze fixtures, zodat dezelfde opdrachten werken in de uitgepakte map.
