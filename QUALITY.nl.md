@@ -6,7 +6,7 @@ Deze pagina laat zien hoe elke release van dd-metric-bill is gecontroleerd, wat 
 
 | | |
 |---|---|
-| Gecontroleerde commit | [`c0a735b`](https://github.com/qwpp7g79y4-maker/dd-metric-bill/commit/c0a735b) |
+| Gecontroleerde commit | [`fd7a599`](https://github.com/qwpp7g79y4-maker/dd-metric-bill/commit/fd7a599) |
 | Tests | 266 automatische tests, gedraaid in debug- en releasemodus en op Rust 1.85 (alle drie: 0 mislukt) |
 
 ### Wat is toegevoegd

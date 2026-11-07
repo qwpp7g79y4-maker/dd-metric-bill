@@ -6,7 +6,7 @@ This page shows how each release of dd-metric-bill was checked, what we found, a
 
 | | |
 |---|---|
-| Commit checked | [`c0a735b`](https://github.com/qwpp7g79y4-maker/dd-metric-bill/commit/c0a735b) |
+| Commit checked | [`fd7a599`](https://github.com/qwpp7g79y4-maker/dd-metric-bill/commit/fd7a599) |
 | Tests | 266 automated tests, run in debug and release mode and on Rust 1.85 (all three: 0 failed) |
 
 ### What was added
