@@ -6,9 +6,16 @@ This page shows how each release of dd-metric-bill was checked, what we found, a
 
 | | |
 |---|---|
-| Commit checked | branch `prep/w24-fout`; the test row was remeasured after `--output`. The 100 MiB row and the coverage row stay the measurement on `1dbd300`. |
-| Tests | 301 automated tests, run in debug mode with the default toolchain (301 passed, 0 failed, 0 ignored) |
+| Commit checked | branch `prep/w24-fout`; the test row was remeasured after the outgoing-connection test. The 100 MiB row and the coverage row stay the measurement on `1dbd300`. |
+| Tests | 302 automated tests, run in debug mode with the default toolchain (302 passed, 0 failed, 0 ignored) |
 | Line coverage | `cargo llvm-cov --no-fail-fast`, measured 2026-11-08: 97.04% of lines (144 of 4871 missed); goal above 90% met, no tests added for it |
+
+### 2026-11-08 (W-45, offline count with outgoing connections blocked, branch prep/w24-fout)
+
+- `tests/offline.rs`: `webshop_count_is_reported_with_outgoing_connections_blocked` runs `count` on `examples/webshop.dogstatsd` inside `unshare --user --map-root-user --net`. That namespace has an empty route table. The report matches `examples/webshop.expected.txt`. No price and no provider were added.
+- `cargo test --no-fail-fast`: 302 passed / 0 failed / 0 ignored.
+- `cargo fmt --check`: clean. `cargo clippy --all-targets -- -D warnings`: clean.
+- Version stays 1.0.0. `rust-version` stays 1.85.
 
 ### Measured on 100 MiB of input
 
@@ -42,7 +49,7 @@ Peak memory in the first run: 105112 KB. This is one machine and one input shape
 
 ### How we checked
 
-- `cargo test --no-fail-fast`: 301 passed, 0 failed, 0 ignored, exit 0. Release mode and Rust 1.85 were not run for this commit.
+- `cargo test --no-fail-fast`: 302 passed, 0 failed, 0 ignored, exit 0. Release mode and Rust 1.85 were not run for this commit.
 - `cargo clippy --all-targets -- -D warnings`: exit 0. `cargo fmt --check`: exit 0 (the `fuzz/` crate was not checked).
 - `cargo +nightly fuzz build`: exit 0 on an earlier commit (`09d370a`); not re-run for this commit.
 - Each of the 7 fuzz targets ran 660 seconds on one pinned CPU core, sequentially (about 77 minutes in total):

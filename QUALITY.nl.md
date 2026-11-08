@@ -6,8 +6,15 @@ Deze pagina laat zien hoe elke release van dd-metric-bill is gecontroleerd, wat 
 
 | | |
 |---|---|
-| Gecontroleerde commit | tak `prep/w24-fout`; de testregel is opnieuw gemeten na `--output`. De 100 MiB-regel en de dekkingsregel blijven de meting op `1dbd300`. |
-| Tests | 301 automatische tests, gedraaid in debugmodus met de standaardtoolchain (301 geslaagd, 0 mislukt, 0 genegeerd) |
+| Gecontroleerde commit | tak `prep/w24-fout`; de testregel is opnieuw gemeten na de test die uitgaande verbindingen blokkeert. De 100 MiB-regel en de dekkingsregel blijven de meting op `1dbd300`. |
+| Tests | 302 automatische tests, gedraaid in debugmodus met de standaardtoolchain (302 geslaagd, 0 mislukt, 0 genegeerd) |
+
+### 2026-11-08 (W-45, offline telling met uitgaande verbindingen geblokkeerd, tak prep/w24-fout)
+
+- `tests/offline.rs`: `webshop_count_is_reported_with_outgoing_connections_blocked` draait `count` op `examples/webshop.dogstatsd` in `unshare --user --map-root-user --net`. Die netwerk-namespace heeft een lege routetabel. Het rapport komt overeen met `examples/webshop.expected.txt`. Er is geen prijs en geen provider toegevoegd.
+- `cargo test --no-fail-fast`: 302 geslaagd / 0 mislukt / 0 genegeerd.
+- `cargo fmt --check`: schoon. `cargo clippy --all-targets -- -D warnings`: schoon.
+- Versie blijft 1.0.0. `rust-version` blijft 1.85.
 
 ### Wat is toegevoegd
 
@@ -31,7 +38,7 @@ Deze pagina laat zien hoe elke release van dd-metric-bill is gecontroleerd, wat 
 
 ### Hoe we controleerden
 
-- `cargo test --no-fail-fast`: 301 geslaagd, 0 mislukt, 0 genegeerd, exit 0. Releasemodus en Rust 1.85 zijn voor deze commit niet gedraaid.
+- `cargo test --no-fail-fast`: 302 geslaagd, 0 mislukt, 0 genegeerd, exit 0. Releasemodus en Rust 1.85 zijn voor deze commit niet gedraaid.
 - `cargo clippy --all-targets -- -D warnings`: exit 0. `cargo fmt --check`: exit 0 (de crate `fuzz/` is niet gecontroleerd).
 - `cargo +nightly fuzz build`: exit 0 op een eerdere commit (`09d370a`); niet opnieuw gedraaid voor deze commit.
 - Elk van de 7 fuzz-targets draaide 660 seconden op één vastgezette CPU-kern, achter elkaar (in totaal ongeveer 77 minuten):
