@@ -135,3 +135,26 @@ fn count_and_diff_on_synthetic_dogstatsd() {
     );
     assert!(compared.stderr.is_empty(), "{}", failure(&compared));
 }
+
+#[test]
+fn completions_print_a_script_for_bash_and_zsh() {
+    for (shell, marker) in [
+        ("bash", "complete -F _dd__metric__bill"),
+        ("zsh", "#compdef dd-metric-bill"),
+    ] {
+        let out = std::process::Command::new(env!("CARGO_BIN_EXE_dd-metric-bill"))
+            .args(["completions", shell])
+            .output()
+            .expect("run dd-metric-bill");
+        assert_eq!(out.status.code(), Some(0), "{shell}");
+        let text = String::from_utf8(out.stdout).expect("utf-8 script");
+        assert!(text.contains(marker), "{shell}: {text}");
+        assert!(text.contains("--budget"), "{shell}");
+    }
+    let bad = std::process::Command::new(env!("CARGO_BIN_EXE_dd-metric-bill"))
+        .args(["completions", "fish"])
+        .output()
+        .expect("run dd-metric-bill");
+    assert_eq!(bad.status.code(), Some(3));
+    assert!(bad.stdout.is_empty());
+}

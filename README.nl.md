@@ -250,6 +250,10 @@ Elke optie van `dd-metric-bill --help`. Dezelfde lijst staat in de [referentie](
 
 Alleen count accepteert --explain, --plan, --hosts, --allow-tags, --prices en --unbounded-threshold. --hosts werkt alleen samen met --plan. --untyped-as werkt alleen samen met --format prometheus. Exitcodes: 0 gelukt, 1 budget overschreden, 2 invoer- of parsefout, 3 gebruiksfout. Na elke fout op stderr staat een `hint:`-regel die zegt wat je kunt doen.
 
+### Shell-completions
+
+`dd-metric-bill completions bash` en `dd-metric-bill completions zsh` printen een completionscript op stdout en eindigen met exit 0. Bijvoorbeeld `dd-metric-bill completions bash > ~/.local/share/bash-completion/completions/dd-metric-bill`. De andere opties worden geaccepteerd en genegeerd.
+
 ## Hoe het rekent
 
 Een custom metric is één combinatie van metricnaam en tagwaarden, inclusief `host`. De pagina van Datadog zegt `Reordering tag values doesn't add uniqueness` (https://docs.datadoghq.com/account_management/billing/custom_metrics, gelezen 7 oktober 2026). COUNT, RATE en GAUGE zijn 1 per combinatie. Een histogram is standaard 5 per combinatie (4 aggregaties plus `95percentile`), een distribution is 5, of 10 met percentielen. `--allow-tags endpoint,status` op het count-sample hierboven is ingested 4 en indexed 3; op het distribution-sample is het ingested 20 en indexed 15. Eén regel met twee verschillende `host`-waarden wordt geweigerd; dezelfde waarde twee keer is één host. De volledige regels, de Prometheus-mapping en de allotment staan in de [referentie](docs/reference.nl.md).

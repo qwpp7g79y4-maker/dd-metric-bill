@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use clap::{CommandFactory, FromArgMatches, Parser, Subcommand, ValueEnum};
+use clap_complete::{generate, Shell};
 use dd_metric_bill::advice::add_advice;
 use dd_metric_bill::allow::{parse_allow_tags, simulate};
 use dd_metric_bill::cost::{estimate_cost, parse_prices, Prices};
@@ -134,6 +135,28 @@ enum Command {
         #[arg(value_name = "NEW")]
         new: PathBuf,
     },
+    /// Print a shell completion script.
+    Completions {
+        /// Shell to print the script for: bash or zsh.
+        #[arg(value_enum, value_name = "SHELL")]
+        shell: CompletionShell,
+    },
+}
+
+/// Shells for which `completions` can print a script.
+#[derive(Clone, Copy, ValueEnum)]
+enum CompletionShell {
+    Bash,
+    Zsh,
+}
+
+impl From<CompletionShell> for Shell {
+    fn from(shell: CompletionShell) -> Self {
+        match shell {
+            CompletionShell::Bash => Shell::Bash,
+            CompletionShell::Zsh => Shell::Zsh,
+        }
+    }
 }
 
 #[derive(Clone, Copy, ValueEnum)]
@@ -213,6 +236,19 @@ fn write_report(text: &str) -> u8 {
 }
 
 fn run(cli: &Cli, threshold_explicit: bool) -> u8 {
+    if let Command::Completions { shell } = &cli.command {
+        let mut script = Vec::new();
+        generate(
+            Shell::from(*shell),
+            &mut Cli::command(),
+            "dd-metric-bill",
+            &mut script,
+        );
+        return match String::from_utf8(script) {
+            Ok(text) => write_report(&text),
+            Err(_) => EXIT_INPUT,
+        };
+    }
     // Refuse diff options first, so `diff --hosts` keeps the diff message, even without `--plan`.
     if let Command::Diff { .. } = &cli.command {
         if let Some(option) = diff_forbidden_option(cli, threshold_explicit) {
@@ -234,6 +270,7 @@ fn run(cli: &Cli, threshold_explicit: bool) -> u8 {
     match &cli.command {
         Command::Count { samples } => count_paths(cli, samples, prices.as_ref()),
         Command::Diff { old, new } => diff_paths(cli, old, new),
+        Command::Completions { .. } => EXIT_OK,
     }
 }
 

@@ -6,11 +6,12 @@ dd-metric-bill \- estimate the number of billable Datadog custom metrics in a sa
 Usage: dd-metric-bill [OPTIONS] <COMMAND>
 Usage: dd-metric-bill count [OPTIONS] <SAMPLE>...
 Usage: dd-metric-bill diff [OPTIONS] <OLD> <NEW>
+Usage: dd-metric-bill completions [OPTIONS] <SHELL>
 .fi
 .SH DESCRIPTION
 Estimate the number of billable Datadog custom metrics in a sample.
 .PP
-The top-level help lists two commands.
+The top-level help lists three commands.
 .TP
 .B count
 Count billable custom metrics in one or more samples.
@@ -23,6 +24,11 @@ Compare two samples.
 is the old sample. \- reads standard input.
 .I NEW
 is the new sample. \- reads standard input.
+.TP
+.B completions
+Print a shell completion script on standard output.
+.I SHELL
+is bash or zsh. The other options are accepted and ignored.
 .PP
 .nh
 Contracts with Metric Name pricing are not supported.
