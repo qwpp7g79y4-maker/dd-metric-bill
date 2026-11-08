@@ -142,6 +142,8 @@ Een sample en een prijsbestand moeten gewone bestanden zijn. Het pad wordt geope
 
 Een pad `-` bij `count` of `diff` leest standaardinvoer.
 
+Elk sample en elk prijsbestand is hoogstens 268435456 bytes (256 MiB). Standaardinvoer heeft dezelfde grens. Een grotere invoer wordt niet ingelezen. De exitcode is 2. De melding is `cannot read sample: PATH: file is larger than 268435456 bytes` of `cannot read price file: PATH: file is larger than 268435456 bytes`.
+
 Een prijsbestand dat geen geldige JSON is, geen object is, of een slecht veld heeft, schrijft `invalid price file: PATH: DETAIL`. `DETAIL` is een van: `not valid json`, `not an object`, `missing field: FIELD`, `empty field: FIELD`, `field is not text: FIELD`, `field is not a number: FIELD`, `field is negative: FIELD`, `field is too large: FIELD`, `unknown field`. Een sleutel die op het hoogste niveau twee keer voorkomt schrijft alleen `price file has a duplicate key`: geen pad en geen tekst uit het bestand.
 
 Een slecht sample noemt het formaat en het regelnummer vanaf 1, nooit de regel zelf:

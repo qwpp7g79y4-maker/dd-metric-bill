@@ -7,13 +7,20 @@ This page shows how each release of dd-metric-bill was checked, what we found, a
 | | |
 |---|---|
 | Commit checked | branch `prep/w24-fout`; the test row was remeasured after the outgoing-connection test. The 100 MiB row and the coverage row stay the measurement on `1dbd300`. |
-| Tests | 302 automated tests, run in debug mode with the default toolchain (302 passed, 0 failed, 0 ignored) |
+| Tests | 303 automated tests, run in debug mode with the default toolchain (303 passed, 0 failed, 0 ignored) |
 | Line coverage | `cargo llvm-cov --no-fail-fast`, measured 2026-11-08: 97.04% of lines (144 of 4871 missed); goal above 90% met, no tests added for it |
 
 ### 2026-11-08 (W-45, offline count with outgoing connections blocked, branch prep/w24-fout)
 
 - `tests/offline.rs`: `webshop_count_is_reported_with_outgoing_connections_blocked` runs `count` on `examples/webshop.dogstatsd` inside `unshare --user --map-root-user --net`. That namespace has an empty route table. The report matches `examples/webshop.expected.txt`. No price and no provider were added.
 - `cargo test --no-fail-fast`: 302 passed / 0 failed / 0 ignored.
+- `cargo fmt --check`: clean. `cargo clippy --all-targets -- -D warnings`: clean.
+- Version stays 1.0.0. `rust-version` stays 1.85.
+
+### 2026-11-08 (W-46, input limit, branch prep/w24-fout)
+
+- Each sample, each price file, and standard input may be at most 268435456 bytes (256 MiB). A larger input exits 2 with `file is larger than 268435456 bytes` and is not loaded. The limit is new. The measured 100 MiB input stays under it. The over-limit file is created in `/tmp` by the test and is not committed. Exit codes stay 0, 1, 2 and 3. No price and no provider were added.
+- `cargo test --no-fail-fast`: 303 passed / 0 failed / 0 ignored.
 - `cargo fmt --check`: clean. `cargo clippy --all-targets -- -D warnings`: clean.
 - Version stays 1.0.0. `rust-version` stays 1.85.
 

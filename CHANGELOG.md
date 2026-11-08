@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Each sample, each price file, and standard input may be at most 268435456 bytes (256 MiB). A larger input exits 2 with `file is larger than 268435456 bytes` and is not loaded. The measured 100 MiB input stays under this limit. Exit codes stay 0, 1, 2 and 3. No price and no provider were added.
 - `tests/offline.rs`: `webshop_count_is_reported_with_outgoing_connections_blocked` runs `count` on `examples/webshop.dogstatsd` in a network namespace (`unshare --user --map-root-user --net`) whose route table is empty. The report matches `examples/webshop.expected.txt`. No price and no provider were added.
 - `--output PATH`, on count and diff, writes the report to a file instead of stdout. An existing file is replaced. A missing parent directory is not created and exits 2, the same code as a failed write to stdout. `completions` ignores the flag and still prints the script on stdout. Exit codes stay 0, 1, 2 and 3. No price and no provider were added.
 - `--quiet` and `--verbose`, on count and diff. A pipe or a redirect omits the `hint:` line. `--verbose` prints that line, and on success one `context:` line on stderr. `--quiet` omits the hint even on a terminal. The report on stdout is unchanged. Exit codes stay 0, 1, 2 and 3. `--quiet` together with `--verbose` is exit 3.

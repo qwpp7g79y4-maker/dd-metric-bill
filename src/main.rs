@@ -25,6 +25,10 @@ const EXIT_BUDGET: u8 = 1;
 const EXIT_INPUT: u8 = 2;
 const EXIT_USAGE: u8 = 3;
 
+/// Largest sample or price file accepted, in bytes (256 MiB).
+/// The measured input of 104857600 bytes (100 MiB) stays under this.
+const MAX_INPUT_BYTES: u64 = 256 * 1024 * 1024;
+
 const AFTER_HELP: &str = "\
 Contracts with Metric Name pricing are not supported.
 Only count accepts --explain, --plan, --hosts, --allow-tags, --prices and --unbounded-threshold.
@@ -615,17 +619,39 @@ fn apply_untyped(samples: &mut [Sample], chosen: UntypedAs) {
 /// after its type is checked. A symlink is followed. A directory, FIFO,
 /// device, or other non-regular file is not read. The type comes from the
 /// opened file, so a path that becomes a FIFO between a separate check and
-/// the read does not wait for a writer.
+/// the read does not wait for a writer. A file larger than
+/// [`MAX_INPUT_BYTES`] is refused from its size and its body is not read.
 fn read_text(path: &Path, kind: &str) -> Result<String, u8> {
-    let mut file = match open_regular(path) {
+    let file = match open_regular(path) {
         Ok(file) => file,
         Err(reason) => {
             refuse_read(kind, path, reason);
             return Err(EXIT_INPUT);
         }
     };
+    if let Ok(meta) = file.metadata() {
+        if meta.len() > MAX_INPUT_BYTES {
+            refuse_too_large(kind, path);
+            return Err(EXIT_INPUT);
+        }
+    }
+    read_capped(file, kind, path)
+}
+
+/// Reads all of standard input as text, for the sample path `-`.
+fn read_stdin_text(kind: &str) -> Result<String, u8> {
+    read_capped(io::stdin().lock(), kind, Path::new("-"))
+}
+
+/// Reads at most one byte past [`MAX_INPUT_BYTES`]. A longer stream is exit 2
+/// and the rest is not kept.
+fn read_capped(reader: impl Read, kind: &str, path: &Path) -> Result<String, u8> {
     let mut text = String::new();
-    match file.read_to_string(&mut text) {
+    match reader.take(MAX_INPUT_BYTES + 1).read_to_string(&mut text) {
+        Ok(_) if text.len() as u64 > MAX_INPUT_BYTES => {
+            refuse_too_large(kind, path);
+            Err(EXIT_INPUT)
+        }
         Ok(_) => Ok(text),
         Err(err) => {
             refuse_read(kind, path, err);
@@ -634,16 +660,15 @@ fn read_text(path: &Path, kind: &str) -> Result<String, u8> {
     }
 }
 
-/// Reads all of standard input as text, for the sample path `-`.
-fn read_stdin_text(kind: &str) -> Result<String, u8> {
-    let mut text = String::new();
-    match io::stdin().lock().read_to_string(&mut text) {
-        Ok(_) => Ok(text),
-        Err(err) => {
-            refuse_read(kind, Path::new("-"), err);
-            Err(EXIT_INPUT)
-        }
-    }
+fn refuse_too_large(kind: &str, path: &Path) {
+    let hint = format!("split the input so each file is at most {MAX_INPUT_BYTES} bytes");
+    note_hint(
+        format_args!(
+            "cannot read {kind}: {}: file is larger than {MAX_INPUT_BYTES} bytes",
+            path.display()
+        ),
+        &hint,
+    );
 }
 
 enum ReadFail {

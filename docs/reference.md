@@ -140,6 +140,8 @@ A sample and a price file must be regular files. The path is opened without wait
 
 A path of `-` for `count` or `diff` reads standard input.
 
+Each sample and each price file is at most 268435456 bytes (256 MiB). Standard input has the same limit. A larger input is not loaded. The exit code is 2. The message is `cannot read sample: PATH: file is larger than 268435456 bytes` or `cannot read price file: PATH: file is larger than 268435456 bytes`.
+
 A price file that is not valid JSON, not an object, or has a bad field prints `invalid price file: PATH: DETAIL`. `DETAIL` is one of: `not valid json`, `not an object`, `missing field: FIELD`, `empty field: FIELD`, `field is not text: FIELD`, `field is not a number: FIELD`, `field is negative: FIELD`, `field is too large: FIELD`, `unknown field`. A key repeated at the top level prints `price file has a duplicate key` and nothing else: no path and no file text.
 
 A bad sample names the format and the 1-based line number, never the line itself:

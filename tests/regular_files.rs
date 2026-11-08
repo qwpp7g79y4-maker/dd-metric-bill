@@ -123,6 +123,37 @@ fn output_within(args: &[&str], limit: Duration) -> Output {
     }
 }
 
+/// One byte over 268435456 (256 MiB) is exit 2. The file is sparse, lives in
+/// `/tmp`, and is removed when the test ends. It is not a repository file.
+#[test]
+fn sample_over_the_byte_limit_exits_2() {
+    const LIMIT: u64 = 268435456;
+    struct Gone(String);
+    impl Drop for Gone {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_file(&self.0);
+        }
+    }
+    let path = Gone(format!(
+        "/tmp/dd-metric-bill-w46-over-limit-{}.dogstatsd",
+        std::process::id()
+    ));
+    let file = std::fs::File::create(&path.0).expect("create over-limit file in /tmp");
+    file.set_len(LIMIT + 1)
+        .expect("sparse length one byte over the limit");
+    drop(file);
+    let output = output_within(&["count", &path.0], Duration::from_secs(2));
+    assert_eq!(output.status.code(), Some(2), "{}", failure(&output));
+    assert!(output.stdout.is_empty(), "{}", failure(&output));
+    let stderr = String::from_utf8(output.stderr).expect("stderr is utf-8");
+    assert!(
+        stderr.contains(&format!("file is larger than {LIMIT} bytes")),
+        "{stderr}"
+    );
+    assert!(stderr.contains("cannot read sample"), "{stderr}");
+    assert!(!stderr.contains("panicked"), "{stderr}");
+}
+
 fn expected_rejection(path: &str, args: &[&str], kind: &str) {
     let output = output_within(args, DEADLINE);
     assert_eq!(output.status.code(), Some(2), "{}", failure(&output));

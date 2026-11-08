@@ -43,7 +43,7 @@ From a local clone: `cargo install --locked --path .`, or `cargo build --release
 
 The binaries are built and smoke-tested on GitHub-hosted runners (Ubuntu, macOS, Windows). Building from source needs Rust 1.85 or newer on any platform Rust supports.
 
-The test suite has 302 automated tests; see [QUALITY.md](QUALITY.md) for how they were run.
+The test suite has 303 automated tests; see [QUALITY.md](QUALITY.md) for how they were run.
 
 ## Quick start
 
@@ -279,6 +279,7 @@ dd-metric-bill applies Datadog's rules. The `host` tag counts, a histogram or di
 - A UTF-8 BOM at the start of a file is skipped, in DogStatsD, JSONL, and Prometheus. That is a choice: the BOM does not belong to the metric name. A BOM later in the file stays.
 - The `_created` sample of an OpenMetrics counter does not count. What Datadog does with it is not verified.
 - Only regular files are read, as a sample for `count` and `diff` and as `--prices`, except a sample path of `-`, which reads standard input instead. A directory, FIFO, device, or other non-regular path is not read. Symlinks are followed. The opened file is checked, so the read does not wait when the path is a FIFO. Giving `-` more than once in the same command reads the whole of standard input for the first one and nothing for the rest.
+- Each sample and each price file, and standard input, may be at most 268435456 bytes (256 MiB). A larger input exits 2 and is not loaded. The message contains `file is larger than 268435456 bytes`.
 - Memory use grows with the size of the sample: the whole sample is read and parsed into memory before counting; there is no streaming mode. Each distinct name, tag key, and tag value is stored once, and a series is kept as a short list of ids while counting. Measured on one machine: a DogStatsD sample of 900,000 unique series (64 MB) uses about 370 MB RSS and 10 seconds, about 6 times the input; before this change the same sample took about 1.3 GB and 24 seconds. A much larger sample needs memory and time accordingly.
 - A Prometheus histogram or summary series that lands on the same name and kind as another sample counts once. The same tags are one combination. `latency_count` from a histogram `latency` and a counter named `latency.count` with the same labels are one metric.
 - A report that cannot be written exits 2 (`could not write the report: REASON`). That is not success, and it does not panic. `--help` and `--version` that cannot be written exit 3. Control characters in currency, source, date, and in a metric name on an error line are printed as `\xNN`.

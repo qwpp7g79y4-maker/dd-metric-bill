@@ -43,7 +43,7 @@ Vanuit een lokale clone: `cargo install --locked --path .`, of `cargo build --re
 
 De binaries worden gebouwd en met een rooktest gecontroleerd op runners van GitHub (Ubuntu, macOS, Windows). Bouwen vanuit de broncode vraagt Rust 1.85 of nieuwer op elk platform dat Rust ondersteunt.
 
-De testsuite heeft 302 automatische tests; zie [QUALITY.nl.md](QUALITY.nl.md) voor hoe ze zijn gedraaid.
+De testsuite heeft 303 automatische tests; zie [QUALITY.nl.md](QUALITY.nl.md) voor hoe ze zijn gedraaid.
 
 ## Snel aan de slag
 
@@ -279,6 +279,7 @@ dd-metric-bill past de regels van Datadog toe. De `host`-tag telt mee, een histo
 - Een UTF-8 BOM aan het begin van een bestand wordt overgeslagen, in DogStatsD, JSONL en Prometheus. Dat is een keuze: de BOM hoort niet bij de metricnaam. Een BOM verderop in het bestand blijft staan.
 - Het `_created`-sample van een OpenMetrics-counter telt niet mee. Wat Datadog daarmee doet is niet geverifieerd.
 - Alleen gewone bestanden worden gelezen, als sample bij `count` en `diff` en als `--prices`, behalve een sample-pad `-`: dat leest dan standaardinvoer. Een map, FIFO, device of ander niet-regulier pad wordt niet gelezen. Symlinks worden gevolgd. Het geopende bestand wordt gecontroleerd, zodat het lezen niet wacht als het pad een FIFO is. `-` meer dan één keer in hetzelfde commando opgeven leest de hele standaardinvoer voor de eerste en niets voor de rest.
+- Elk sample en elk prijsbestand, en standaardinvoer, is hoogstens 268435456 bytes (256 MiB). Een grotere invoer eindigt met exit 2 en wordt niet ingelezen. De melding bevat `file is larger than 268435456 bytes`.
 - Geheugengebruik groeit met de grootte van het sample: het hele sample wordt vóór het tellen in het geheugen gelezen en geparsed; er is geen streamingmodus. Elke aparte naam, tagsleutel en tagwaarde wordt één keer opgeslagen en tijdens het tellen is een serie een korte lijst ids. Gemeten op één machine: een DogStatsD-sample van 900.000 unieke series (64 MB) gebruikt ongeveer 370 MB RSS en 10 seconden, ongeveer 6 keer de invoer; vóór deze wijziging was dat voor hetzelfde sample ongeveer 1,3 GB en 24 seconden. Een veel groter sample vraagt navenant meer geheugen en tijd.
 - Een Prometheus-histogram of -summary die op dezelfde naam en hetzelfde soort uitkomt als een ander sample telt één keer. Dezelfde tags zijn één combinatie. `latency_count` van een histogram `latency` en een counter `latency.count` met dezelfde labels zijn één metric.
 - Een verslag dat niet geschreven kan worden geeft exit 2 (`could not write the report: REASON`). Dat is geen succes en het geeft geen panic. `--help` en `--version` die niet geschreven kunnen worden geven exit 3. Stuurtekens in currency, source, date en in een metricnaam op een foutregel worden als `\xNN` getoond.

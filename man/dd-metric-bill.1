@@ -47,6 +47,12 @@ except
 .BR --version ,
 which only the top-level help lists.
 Passing an option that count accepts and diff does not accept makes diff exit 3, before it reads a sample or a price file.
+.PP
+Each sample and each price file may be at most 268435456 bytes (256 MiB).
+Standard input has the same limit.
+A larger input exits 2 and is not loaded.
+The message says
+.B file is larger than 268435456 bytes .
 .SH OPTIONS
 .TP
 .B --format \fIFORMAT\fR
@@ -116,7 +122,7 @@ On a terminal, or with --verbose, a second line starts with hint:.
 A pipe, a redirect, or --quiet keeps the one line.
 .TP
 .B 2
-The sample or the price file cannot be read or is invalid, or the report cannot be written. A failed report write does not panic.
+The sample or the price file cannot be read or is invalid, or the report cannot be written. A file larger than 268435456 bytes is this code. A failed report write does not panic.
 .TP
 .B 3
 Usage error, including an unknown option, a missing argument, or an option combination the help text rejects. Standard output is empty. --help and --version that cannot be written also exit 3, and that failure does not panic.
