@@ -30,7 +30,7 @@ Run `dd-metric-bill --help` or `dd-metric-bill count --help` for the built-in he
 | `--verbose` | count and diff | Print the hint line even on a pipe, and on success one `context:` line on stderr. |
 | `--output` | count and diff | Write the report to this file instead of stdout. An existing file is replaced. A missing parent directory is not created and exits 2. |
 | `--help` | everywhere | Show help and exit 0. |
-| `--version` | top level | Show the version (`dd-metric-bill 1.0.0`) and exit 0. |
+| `--version` | top level | Show the version (`dd-metric-bill 1.0.0`) and exit 0. A debug build also prints the git commit when git provides one. |
 
 Only count accepts --explain, --plan, --hosts, --allow-tags, --prices and --unbounded-threshold. --hosts only works together with --plan. --untyped-as only works together with --format prometheus.
 

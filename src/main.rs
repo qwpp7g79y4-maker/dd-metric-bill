@@ -37,11 +37,19 @@ Only count accepts --explain, --plan, --hosts, --allow-tags, --prices and --unbo
 --hosts only works together with --plan.
 --untyped-as only works together with --format prometheus.";
 
+/// Crate version. A debug build appends the git commit when git printed one.
+/// A release build stays the crate version. No hash is invented.
+#[cfg(all(debug_assertions, has_git_sha))]
+const VERSION: &str = concat!(env!("CARGO_PKG_VERSION"), " (", env!("GIT_SHA"), ")");
+
+#[cfg(not(all(debug_assertions, has_git_sha)))]
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 #[derive(Parser)]
 #[command(
     name = "dd-metric-bill",
     bin_name = "dd-metric-bill",
-    version,
+    version = VERSION,
     about = "Estimate the number of billable Datadog custom metrics in a sample.",
     after_help = AFTER_HELP,
     disable_help_subcommand = true

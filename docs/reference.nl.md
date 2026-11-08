@@ -30,7 +30,7 @@ De tekst die de binary schrijft is Engels. De voorbeelden en de foutmeldingen hi
 | `--verbose` | count en diff | Print de `hint:`-regel ook bij een pipe, en bij succes één `context:`-regel op stderr. |
 | `--output` | count en diff | Schrijf het verslag naar dit bestand in plaats van stdout. Een bestaand bestand wordt overschreven. Een ontbrekende bovenliggende map wordt niet aangemaakt en eindigt met exitcode 2. |
 | `--help` | overal | Toon hulp en exitcode 0. |
-| `--version` | bovenaan | Toon de versie (`dd-metric-bill 1.0.0`) en exitcode 0. |
+| `--version` | bovenaan | Toon de versie (`dd-metric-bill 1.0.0`) en exitcode 0. Een debug-build toont ook de git-commit als git die geeft. |
 
 Alleen count accepteert --explain, --plan, --hosts, --allow-tags, --prices en --unbounded-threshold. --hosts werkt alleen samen met --plan. --untyped-as werkt alleen samen met --format prometheus.
 

@@ -43,7 +43,7 @@ Vanuit een lokale clone: `cargo install --locked --path .`, of `cargo build --re
 
 De binaries worden gebouwd en met een rooktest gecontroleerd op runners van GitHub (Ubuntu, macOS, Windows). Bouwen vanuit de broncode vraagt Rust 1.85 of nieuwer op elk platform dat Rust ondersteunt.
 
-De testsuite heeft 304 automatische tests; zie [QUALITY.nl.md](QUALITY.nl.md) voor hoe ze zijn gedraaid.
+De testsuite heeft 305 automatische tests; zie [QUALITY.nl.md](QUALITY.nl.md) voor hoe ze zijn gedraaid.
 
 ## Snel aan de slag
 
@@ -249,7 +249,7 @@ Elke optie van `dd-metric-bill --help`. Dezelfde lijst staat in de [referentie](
 | `--verbose` | count en diff | Print de `hint:`-regel ook bij een pipe, en bij succes één `context:`-regel op stderr. |
 | `--output` | count en diff | Schrijf het verslag naar dit bestand in plaats van stdout. Een bestaand bestand wordt overschreven. Een ontbrekende bovenliggende map wordt niet aangemaakt en eindigt met exitcode 2. |
 | `--help` | overal | Toon hulp en exitcode 0. |
-| `--version` | bovenaan | Toon de versie (`dd-metric-bill 1.0.0`) en exitcode 0. |
+| `--version` | bovenaan | Toon de versie (`dd-metric-bill 1.0.0`) en exitcode 0. Een debug-build toont ook de git-commit als git die geeft. |
 
 Alleen count accepteert --explain, --plan, --hosts, --allow-tags, --prices en --unbounded-threshold. --hosts werkt alleen samen met --plan. --untyped-as werkt alleen samen met --format prometheus. Exitcodes: 0 gelukt, 1 budget overschreden, 2 invoer- of parsefout, 3 gebruiksfout, 130 SIGINT (geen half rapport). Op een terminal, of met `--verbose`, volgt na een fout op stderr een `hint:`-regel die zegt wat je kunt doen. Een pipe, een redirect of `--quiet` houdt alleen de eerste regel. `--verbose` schrijft bij een gelukt verslag ook één `context:`-regel op stderr. `--quiet` samen met `--verbose` eindigt met exitcode 3. `--output PATH` schrijft dat verslag naar het bestand en laat stdout leeg. Gewone exitcodes blijven 0, 1, 2 en 3. SIGINT eindigt met 130 en laat geen half rapport achter.
 

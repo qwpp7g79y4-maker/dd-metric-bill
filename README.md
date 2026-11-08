@@ -43,7 +43,7 @@ From a local clone: `cargo install --locked --path .`, or `cargo build --release
 
 The binaries are built and smoke-tested on GitHub-hosted runners (Ubuntu, macOS, Windows). Building from source needs Rust 1.85 or newer on any platform Rust supports.
 
-The test suite has 304 automated tests; see [QUALITY.md](QUALITY.md) for how they were run.
+The test suite has 305 automated tests; see [QUALITY.md](QUALITY.md) for how they were run.
 
 ## Quick start
 
@@ -249,7 +249,7 @@ Every option of `dd-metric-bill --help`. The same list is in the [reference](doc
 | `--verbose` | count and diff | Print the hint line even on a pipe, and on success one `context:` line on stderr. |
 | `--output` | count and diff | Write the report to this file instead of stdout. An existing file is replaced. A missing parent directory is not created and exits 2. |
 | `--help` | everywhere | Show help and exit 0. |
-| `--version` | top level | Show the version (`dd-metric-bill 1.0.0`) and exit 0. |
+| `--version` | top level | Show the version (`dd-metric-bill 1.0.0`) and exit 0. A debug build also prints the git commit when git provides one. |
 
 Only count accepts --explain, --plan, --hosts, --allow-tags, --prices and --unbounded-threshold. --hosts only works together with --plan. --untyped-as only works together with --format prometheus. Exit codes: 0 success, 1 budget exceeded, 2 input or parse error, 3 usage error, 130 SIGINT (no half-written report). On a terminal, or with `--verbose`, an error on stderr is followed by a `hint:` line that says what you can do. A pipe, a redirect, or `--quiet` keeps only the first line. `--verbose` also writes one `context:` line on stderr after a successful report. `--quiet` together with `--verbose` exits 3. `--output PATH` writes that report to the file and leaves stdout empty. Ordinary exit codes stay 0, 1, 2 and 3. SIGINT exits 130 and does not leave a half-written report.
 
