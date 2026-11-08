@@ -1,3 +1,5 @@
+//! DogStatsD, JSON lines, and Prometheus text, turned into [`Sample`]s.
+
 mod dogstatsd;
 mod json_keys;
 mod jsonl;
@@ -58,19 +60,21 @@ pub struct ParseError {
 }
 
 impl ParseError {
+    /// 1-based line number named in the message.
+    pub fn line(&self) -> usize {
+        self.line
+    }
+
+    /// Always 2.
+    pub fn exit_code(&self) -> u8 {
+        2
+    }
+
     pub(crate) fn new(format: &'static str, line: usize, reason: &'static str) -> Self {
         Self {
             line,
             detail: format!("invalid {format} line {line}: {reason}"),
         }
-    }
-
-    pub fn line(&self) -> usize {
-        self.line
-    }
-
-    pub fn exit_code(&self) -> u8 {
-        2
     }
 }
 
@@ -92,10 +96,15 @@ impl std::error::Error for ParseError {}
 /// was placed, per D12, on `name.count`. The source is then B3, not B2.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Sample {
+    /// Metric name.
     pub name: Text,
+    /// Billable kind.
     pub kind: Kind,
+    /// Tags on this sample. The count does not depend on their order.
     pub tags: Vec<Tag>,
+    /// Set when a Prometheus histogram or summary was placed on `name.count`, `name.sum`, `name.bucket`, or `name.quantile` (D10).
     pub d10: bool,
+    /// Set when an OpenMetrics counter `_total` was placed on `name.count` (D12).
     pub counter_total: bool,
 }
 
@@ -108,10 +117,15 @@ pub struct Sample {
 /// or gauge before the count.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Kind {
+    /// Count, including DogStatsD `c` and a Prometheus counter.
     Count,
+    /// Gauge, including DogStatsD `g` and `s` (a set).
     Gauge,
+    /// Histogram, including DogStatsD `h` and `ms` (a timer).
     Histogram,
+    /// Distribution (DogStatsD `d`).
     Distribution,
+    /// Prometheus `# TYPE untyped`, or a sample with no `# TYPE` (D11).
     Untyped,
 }
 
@@ -123,7 +137,9 @@ pub enum Kind {
 /// a parsed one.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Tag {
+    /// Tag key. Parsers store it in lowercase.
     pub key: Text,
+    /// Tag value, or `None` when the tag has no value. Parsers store it in lowercase.
     pub value: Option<Text>,
 }
 

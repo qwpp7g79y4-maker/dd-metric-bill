@@ -1,3 +1,5 @@
+//! Allowlist count: ingested over every tag, indexed over the allowed keys (D6).
+
 use std::collections::BTreeSet;
 
 use crate::count::{count_by_metric, count_tags_where, CountError};
@@ -10,9 +12,13 @@ use crate::parse::{Kind, Sample};
 /// allowlist, the ordinary count (D1-D5).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MetricAllow {
+    /// Metric name.
     pub name: String,
+    /// Billable kind.
     pub kind: Kind,
+    /// Count over all tags. Absent when no allowlist is set.
     pub ingested: Option<u64>,
+    /// Count over the allowed keys, or the ordinary count when no allowlist is set.
     pub indexed: u64,
 }
 
@@ -22,8 +28,11 @@ pub struct MetricAllow {
 /// Only metrics with an allowlist count toward ingested.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AllowReport {
+    /// One row per metric name and kind.
     pub metrics: Vec<MetricAllow>,
+    /// Ingested total. Absent when no allowlist is set.
     pub ingested: Option<u64>,
+    /// Indexed total. Without an allowlist this equals the ordinary total.
     pub indexed: u64,
 }
 

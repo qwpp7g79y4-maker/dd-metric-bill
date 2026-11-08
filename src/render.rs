@@ -1,3 +1,5 @@
+//! Text and JSON for `count` and `diff`.
+
 use std::collections::HashMap;
 use std::fmt::Write;
 use std::path::Path;

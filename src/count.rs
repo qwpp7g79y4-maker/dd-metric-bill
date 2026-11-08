@@ -1,3 +1,5 @@
+//! Billable custom-metric counts (D1-D5) and the host allotment (D7).
+
 use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::fmt::{self, Write};
@@ -20,17 +22,28 @@ pub enum CountError {
     /// Hosts times the metrics per host does not fit in `u64`.
     Allotment,
     /// `--histogram-aggregates` plus `--histogram-percentiles` does not fit in `u64`.
-    Sum { aggregates: u64, percentiles: u64 },
+    Sum {
+        /// Value of `--histogram-aggregates`.
+        aggregates: u64,
+        /// Value of `--histogram-percentiles`.
+        percentiles: u64,
+    },
     /// The factor times the number of combinations does not fit in `u64`.
     Product {
+        /// Metric whose product overflowed.
         metric: String,
+        /// Histogram or distribution factor.
         factor: u64,
+        /// Unique tag combinations of that metric.
         combinations: u64,
     },
     /// The sum of the metric counts does not fit in `u64`.
     Total {
+        /// Metric that was being added when the total overflowed.
         metric: String,
+        /// Histogram or distribution factor of that metric.
         factor: u64,
+        /// Unique tag combinations of that metric.
         combinations: u64,
     },
 }
@@ -126,25 +139,35 @@ const D5_TEXT: &str = "DISTRIBUTION: 5 per unique tag combination (`count`, `sum
 /// Rule that sets the count for one metric, with a source URL (B1 or B2).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Rule {
+    /// Short rule code, such as `D3`.
     pub code: &'static str,
+    /// Rule text. The configured factor is appended for D4 and D5.
     pub text: String,
+    /// Source URL for the rule (B1 or B2).
     pub source: &'static str,
 }
 
 /// Billable count of one metric name and kind.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MetricCount {
+    /// Metric name.
     pub name: String,
+    /// Billable kind.
     pub kind: Kind,
+    /// Unique tag combinations.
     pub combinations: u64,
+    /// Billable count after the rule's factor.
     pub count: u64,
+    /// Rule that set [`MetricCount::count`].
     pub rule: Rule,
 }
 
 /// Count over a sample: per metric and the total.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CountReport {
+    /// One row per metric name and kind.
     pub metrics: Vec<MetricCount>,
+    /// Sum of [`MetricCount::count`].
     pub total: u64,
 }
 
@@ -157,14 +180,18 @@ pub const ENTERPRISE_PER_HOST: u64 = 200;
 /// Plan for the allotment (D7).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Plan {
+    /// Pro: [`PRO_PER_HOST`] custom metrics per host.
     Pro,
+    /// Enterprise: [`ENTERPRISE_PER_HOST`] custom metrics per host.
     Enterprise,
 }
 
 /// One volume against the allotment (D7). `surplus` is 0 below the allotment.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct AgainstAllotment {
+    /// Indexed or ingested usage.
     pub usage: u64,
+    /// Usage above the allotment, or 0 when usage is lower.
     pub surplus: u64,
 }
 
@@ -174,10 +201,15 @@ pub struct AgainstAllotment {
 /// is absent. With an allowlist, indexed and ingested are each listed separately.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Allotment {
+    /// Pro or Enterprise.
     pub plan: Plan,
+    /// Hosts the allotment was multiplied by.
     pub hosts: u64,
+    /// Metrics per host times [`Allotment::hosts`].
     pub allotment: u64,
+    /// Indexed usage against the allotment.
     pub indexed: AgainstAllotment,
+    /// Ingested usage against the allotment. Absent without an allowlist.
     pub ingested: Option<AgainstAllotment>,
 }
 

@@ -1,3 +1,5 @@
+//! Tag keys per metric, and keys that look unbounded.
+
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 
 use crate::parse::{Kind, Sample};
@@ -16,16 +18,22 @@ struct Group {
 /// histogram and distribution factor is not included.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TagKey {
+    /// Tag key.
     pub key: String,
+    /// Distinct values of this key.
     pub unique_values: u64,
+    /// Series with the key, minus the series that remain when the key is dropped.
     pub added: u64,
 }
 
 /// Breakdown of one metric name and kind.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MetricTags {
+    /// Metric name.
     pub name: String,
+    /// Billable kind.
     pub kind: Kind,
+    /// Tag keys, descending by added series.
     pub keys: Vec<TagKey>,
 }
 
@@ -160,25 +168,35 @@ const POD_HASH_MIN_LEN: usize = 5;
 /// order in the output.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum UnboundedReason {
+    /// More unique values than the threshold.
     Threshold,
+    /// A value is `8-4-4-4-12` hexadecimal groups.
     Uuid,
+    /// A value is at least 16 hex characters and contains a hex letter.
     HexId,
+    /// A value is digits only and at least 6 characters.
     NumericId,
+    /// A value looks like `name-<hash>-<hash>`, each hash at least 5 characters.
     PodName,
 }
 
 /// One unbounded tag key, with the reasons that apply.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UnboundedTag {
+    /// Tag key.
     pub key: String,
+    /// Reasons that apply, in output order.
     pub reasons: Vec<UnboundedReason>,
 }
 
 /// Unbounded keys of one metric name and kind.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MetricUnbounded {
+    /// Metric name.
     pub name: String,
+    /// Billable kind.
     pub kind: Kind,
+    /// Unbounded keys of this metric.
     pub keys: Vec<UnboundedTag>,
     /// What dropping every unbounded key would save. `None` until
     /// [`crate::advice::add_advice`] runs, and when dropping saves nothing.
@@ -188,7 +206,9 @@ pub struct MetricUnbounded {
 /// Billable count of one metric before and after its unbounded keys are dropped.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DropAdvice {
+    /// Billable count with every tag.
     pub before: u64,
+    /// Billable count after the unbounded keys are dropped.
     pub after: u64,
 }
 
