@@ -97,6 +97,9 @@ Hide the hint line, even when stderr is a terminal. No context line.
 .B --verbose
 Print the hint line even when stderr is a pipe, and on success one context line on stderr.
 .TP
+.B --output \fIPATH\fR
+Write the report to this file instead of standard output. An existing file is replaced. A missing parent directory is an error and is not created. Count and diff accept this option. The completions command ignores it.
+.TP
 .B -h , --help
 Print help. Exit 0 when the help text can be written.
 .TP
@@ -105,10 +108,10 @@ Print version. Exit 0 when the version text can be written. Shown by the top-lev
 .SH EXIT STATUS
 .TP
 .B 0
-The report was printed, or help or version was printed. With --budget, the total (for diff, the new total) is not above N.
+The report was printed, or written to the file named by --output, or help or version was printed. With --budget, the total (for diff, the new total) is not above N.
 .TP
 .B 1
---budget was exceeded. The report is still printed on standard output. Standard error is one line: budget exceeded: TOTAL > LIMIT.
+--budget was exceeded. The report is still printed on standard output, or written to --output when that flag is set. Standard output stays empty when --output is set. Standard error is one line: budget exceeded: TOTAL > LIMIT.
 On a terminal, or with --verbose, a second line starts with hint:.
 A pipe, a redirect, or --quiet keeps the one line.
 .TP

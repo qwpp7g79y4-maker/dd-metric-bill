@@ -28,6 +28,7 @@ De tekst die de binary schrijft is Engels. De voorbeelden en de foutmeldingen hi
 | `--untyped-as` | count en diff, alleen met `--format prometheus` | Een Prometheus-metric zonder type telt als `gauge` of `count`. |
 | `--quiet` | count en diff | Verberg de `hint:`-regel, ook op een terminal. Geen contextregel. |
 | `--verbose` | count en diff | Print de `hint:`-regel ook bij een pipe, en bij succes één `context:`-regel op stderr. |
+| `--output` | count en diff | Schrijf het verslag naar dit bestand in plaats van stdout. Een bestaand bestand wordt overschreven. Een ontbrekende bovenliggende map wordt niet aangemaakt en eindigt met exitcode 2. |
 | `--help` | overal | Toon hulp en exitcode 0. |
 | `--version` | bovenaan | Toon de versie (`dd-metric-bill 1.0.0`) en exitcode 0. |
 
@@ -131,11 +132,11 @@ Bij een onleesbaar bestand, een regel die niet parseert, een ongeldig prijsbesta
 | Code | Betekenis |
 | --- | --- |
 | 0 | Het verslag is geschreven. Met `--budget` ligt het totaal niet boven N. |
-| 1 | `--budget` overschreden. Stdout heeft nog steeds het verslag. Stderr is `budget exceeded: TOTAL > LIMIT`. |
+| 1 | `--budget` overschreden. Stdout heeft nog steeds het verslag, behalve als `--output` het naar een bestand schreef. Stderr is `budget exceeded: TOTAL > LIMIT`. |
 | 2 | Het sample of het prijsbestand kan niet gelezen worden of is ongeldig, of het verslag kan niet geschreven worden. |
 | 3 | Gebruiksfout. Stdout is leeg. `--help` en `--version` die niet geschreven kunnen worden geven ook exit 3. |
 
-Als stdout het verslag niet kan aannemen, is stderr `could not write the report: REASON` en de exitcode 2. `--help` en `--version` die niet geschreven kunnen worden geven exit 3, en stderr is `could not write the message: REASON`. Een mislukte schrijfactie geeft geen panic.
+Als stdout het verslag niet kan aannemen, is stderr `could not write the report: REASON` en de exitcode 2. Met `--output PATH` gaat het verslag naar dat bestand en blijft stdout leeg. Een bestaand bestand wordt overschreven. Een ontbrekende bovenliggende map wordt niet aangemaakt; stderr begint met `could not write the report to` en de exitcode is 2. `--help` en `--version` die niet geschreven kunnen worden geven exit 3, en stderr is `could not write the message: REASON`. Een mislukte schrijfactie geeft geen panic.
 
 Een sample en een prijsbestand moeten gewone bestanden zijn. Het pad wordt geopend zonder te wachten, en alleen dat geopende bestand wordt gelezen. Een symlink wordt gevolgd. Een map, FIFO, device of ander niet-regulier pad wordt niet gelezen, zodat een FIFO zonder schrijver niet blijft hangen. Het type komt van het geopende bestand, zodat een pad dat een FIFO wordt het lezen niet laat wachten. De melding is `cannot read sample: PATH: REASON` of `cannot read price file: PATH: REASON`, en `REASON` bevat `not a regular file` als het pad geen gewoon bestand is.
 

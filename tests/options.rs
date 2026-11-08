@@ -306,6 +306,29 @@ const CASES: &[(&str, Case)] = &[
             },
         },
     ),
+    (
+        "--output",
+        Case {
+            count: Expectation::Exitcode {
+                baseline: &[],
+                with: &[
+                    "--output",
+                    "tests/fixtures/missing-output-parent/report.txt",
+                ],
+                samples: ONE,
+                code: 2,
+            },
+            diff: Expectation::Exitcode {
+                baseline: &[],
+                with: &[
+                    "--output",
+                    "tests/fixtures/missing-output-parent/report.txt",
+                ],
+                samples: DIFF_OK,
+                code: 2,
+            },
+        },
+    ),
 ];
 
 fn binary() -> Command {

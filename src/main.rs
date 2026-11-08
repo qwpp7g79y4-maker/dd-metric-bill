@@ -123,6 +123,11 @@ struct Cli {
     /// Print the hint line, and on success one context line on stderr.
     #[arg(long, global = true, conflicts_with = "quiet")]
     verbose: bool,
+
+    /// Write the report to this file instead of stdout.
+    /// An existing file is replaced. A missing parent directory is an error.
+    #[arg(long, global = true, value_name = "PATH")]
+    output: Option<PathBuf>,
 }
 
 thread_local! {
@@ -274,15 +279,31 @@ fn note_hint(args: std::fmt::Arguments<'_>, hint: &str) {
     }
 }
 
-/// Writes the report to stdout. A failed write is exit 2 and does not panic.
-fn write_report(text: &str) -> u8 {
-    let mut out = io::stdout().lock();
-    match out.write_all(text.as_bytes()).and_then(|()| out.flush()) {
+/// Writes the report to stdout, or to `--output` when that path is set.
+/// A missing parent directory is not created. A failed write is exit 2.
+fn write_report(path: Option<&Path>, text: &str) -> u8 {
+    let Some(path) = path else {
+        let mut out = io::stdout().lock();
+        return match out.write_all(text.as_bytes()).and_then(|()| out.flush()) {
+            Ok(()) => EXIT_OK,
+            Err(err) => {
+                note_hint(
+                    format_args!("could not write the report: {err}"),
+                    "check that standard output is still open and has free space, or redirect it to a file",
+                );
+                EXIT_INPUT
+            }
+        };
+    };
+    match File::create(path).and_then(|mut file| {
+        file.write_all(text.as_bytes())?;
+        file.flush()
+    }) {
         Ok(()) => EXIT_OK,
         Err(err) => {
             note_hint(
-                format_args!("could not write the report: {err}"),
-                "check that standard output is still open and has free space, or redirect it to a file",
+                format_args!("could not write the report to {}: {err}", path.display()),
+                "check that the parent directory exists and is writable; it is not created",
             );
             EXIT_INPUT
         }
@@ -298,8 +319,9 @@ fn run(cli: &Cli, threshold_explicit: bool) -> u8 {
             "dd-metric-bill",
             &mut script,
         );
+        // Completions stay on stdout. Other options, including `--output`, are ignored.
         return match String::from_utf8(script) {
-            Ok(text) => write_report(&text),
+            Ok(text) => write_report(None, &text),
             Err(_) => EXIT_INPUT,
         };
     }
@@ -400,7 +422,7 @@ fn count_paths(cli: &Cli, paths: &[PathBuf], prices: Option<&Prices>) -> u8 {
             cost.as_ref(),
         )
     };
-    if write_report(&rendered) != EXIT_OK {
+    if write_report(cli.output.as_deref(), &rendered) != EXIT_OK {
         return EXIT_INPUT;
     }
     let status = budget_status(cli.budget, report.total);
@@ -473,7 +495,7 @@ fn diff_paths(cli: &Cli, old: &Path, new: &Path) -> u8 {
     } else {
         render_diff(&report)
     };
-    if write_report(&rendered) != EXIT_OK {
+    if write_report(cli.output.as_deref(), &rendered) != EXIT_OK {
         return EXIT_INPUT;
     }
     let status = budget_status(cli.budget, report.new_total);

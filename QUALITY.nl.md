@@ -6,8 +6,8 @@ Deze pagina laat zien hoe elke release van dd-metric-bill is gecontroleerd, wat 
 
 | | |
 |---|---|
-| Gecontroleerde commit | tak `prep/w24-fout`; de testregel is opnieuw gemeten na `--quiet` en `--verbose`. De 100 MiB-regel en de dekkingsregel blijven de meting op `1dbd300`. |
-| Tests | 298 automatische tests, gedraaid in debugmodus met de standaardtoolchain (298 geslaagd, 0 mislukt, 0 genegeerd) |
+| Gecontroleerde commit | tak `prep/w24-fout`; de testregel is opnieuw gemeten na `--output`. De 100 MiB-regel en de dekkingsregel blijven de meting op `1dbd300`. |
+| Tests | 301 automatische tests, gedraaid in debugmodus met de standaardtoolchain (301 geslaagd, 0 mislukt, 0 genegeerd) |
 
 ### Wat is toegevoegd
 
@@ -31,7 +31,7 @@ Deze pagina laat zien hoe elke release van dd-metric-bill is gecontroleerd, wat 
 
 ### Hoe we controleerden
 
-- `cargo test --no-fail-fast`: 298 geslaagd, 0 mislukt, 0 genegeerd, exit 0. Releasemodus en Rust 1.85 zijn voor deze commit niet gedraaid.
+- `cargo test --no-fail-fast`: 301 geslaagd, 0 mislukt, 0 genegeerd, exit 0. Releasemodus en Rust 1.85 zijn voor deze commit niet gedraaid.
 - `cargo clippy --all-targets -- -D warnings`: exit 0. `cargo fmt --check`: exit 0 (de crate `fuzz/` is niet gecontroleerd).
 - `cargo +nightly fuzz build`: exit 0 op een eerdere commit (`09d370a`); niet opnieuw gedraaid voor deze commit.
 - Elk van de 7 fuzz-targets draaide 660 seconden op één vastgezette CPU-kern, achter elkaar (in totaal ongeveer 77 minuten):
