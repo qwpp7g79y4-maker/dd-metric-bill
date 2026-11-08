@@ -2,9 +2,20 @@
 
 All notable changes to this project are documented in this file.
 
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
 ## [Unreleased]
 
-## [1.0.0]
+### Added
+
+- `count` adds an advice line for each metric with unbounded tag keys: the billable count with and without those keys. JSON output gets an `advice` object under `unbounded`.
+
+### Changed
+
+- The README and the quality reports state the measured test count: 278.
+
+## [1.0.0] - 2026-11-08
 
 The previous version is 0.1.2. The changes below, including the breaking ones, are in 1.0.0.
 
@@ -16,7 +27,7 @@ The previous version is 0.1.2. The changes below, including the breaking ones, a
 ### Changed
 
 - Errors on stderr for an unreadable sample or price file, a line that does not parse, an invalid price file, a budget overrun, and a count that does not fit are followed by a `hint:` line that says what you can do. The first line, the stdout, and the exit codes are unchanged.
-- The README states the test count (268), the same number as the quality report.
+- The README states the test count, the same number as the quality report.
 - Breaking: `Sample.name`, `Tag.key`, and `Tag.value` are now `Arc<str>` (the type `parse::Text`) instead of `String`.
 - Breaking: `#HOST:a,HOST:b` (two values that are the same `host` key after lowercasing) now exits with 2, like `#host:a,host:b`.
 - Counting lowercases tags, so a `Sample` built through the public API with `HOST:a` counts the same as a parsed `host:a`. The tags in the `Sample` are not changed.
@@ -83,3 +94,9 @@ The previous version is 0.1.2. The changes below, including the breaking ones, a
 - `--unbounded-threshold`: mark tag keys with too many values, or with an id-like value.
 - `--histogram-aggregates`, `--histogram-percentiles`, and `--percentiles`: the histogram and distribution factors.
 - `--untyped-as`: count Prometheus metrics without a type as gauge or count.
+
+[Unreleased]: https://github.com/qwpp7g79y4-maker/dd-metric-bill/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/qwpp7g79y4-maker/dd-metric-bill/compare/v0.1.2...v1.0.0
+[0.1.2]: https://github.com/qwpp7g79y4-maker/dd-metric-bill/compare/v0.1.1...v0.1.2
+[0.1.1]: https://github.com/qwpp7g79y4-maker/dd-metric-bill/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/qwpp7g79y4-maker/dd-metric-bill/releases/tag/v0.1.0
