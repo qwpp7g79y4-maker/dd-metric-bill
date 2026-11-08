@@ -176,7 +176,10 @@ fn usage_exit(err: &clap::Error) -> u8 {
         _ => EXIT_USAGE,
     };
     if let Err(io_err) = err.print() {
-        note(format_args!("could not write the message: {io_err}"));
+        note_hint(
+            format_args!("could not write the message: {io_err}"),
+            "check that standard output is still open and has free space, or redirect it to a file",
+        );
         return EXIT_USAGE;
     }
     code
@@ -200,7 +203,10 @@ fn write_report(text: &str) -> u8 {
     match out.write_all(text.as_bytes()).and_then(|()| out.flush()) {
         Ok(()) => EXIT_OK,
         Err(err) => {
-            note(format_args!("could not write the report: {err}"));
+            note_hint(
+                format_args!("could not write the report: {err}"),
+                "check that standard output is still open and has free space, or redirect it to a file",
+            );
             EXIT_INPUT
         }
     }
