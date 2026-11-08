@@ -133,6 +133,9 @@ fn assert_conflict(format_name: &str, body: &str, line_no: usize, also_default: 
         ]);
         calls.push(vec!["diff".to_string(), bad_path, good_path]);
     }
+    for call in &mut calls {
+        call.insert(0, "--verbose".to_string());
+    }
     for call in calls {
         let output = run(&call);
         assert_eq!(

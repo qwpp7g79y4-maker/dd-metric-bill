@@ -59,6 +59,14 @@ enum Expectation {
         with: &'static [&'static str],
         samples: &'static [&'static str],
     },
+    /// Exit 0. The report on stdout stays the same. Stderr changes.
+    Stderr {
+        baseline: &'static [&'static str],
+        with: &'static [&'static str],
+        samples: &'static [&'static str],
+    },
+    /// Together with `--verbose` this option is a usage error (exit 3).
+    ConflictsVerbose { samples: &'static [&'static str] },
 }
 
 const CASES: &[(&str, Case)] = &[
@@ -276,6 +284,28 @@ const CASES: &[(&str, Case)] = &[
             },
         },
     ),
+    (
+        "--quiet",
+        Case {
+            count: Expectation::ConflictsVerbose { samples: ONE },
+            diff: Expectation::ConflictsVerbose { samples: DIFF_OK },
+        },
+    ),
+    (
+        "--verbose",
+        Case {
+            count: Expectation::Stderr {
+                baseline: &[],
+                with: &["--verbose"],
+                samples: ONE,
+            },
+            diff: Expectation::Stderr {
+                baseline: &[],
+                with: &["--verbose"],
+                samples: DIFF_OK,
+            },
+        },
+    ),
 ];
 
 fn binary() -> Command {
@@ -451,7 +481,9 @@ fn check(help: &str, sub: &str, option: &str, expectation: &Expectation) -> Opti
         Expectation::Output { samples, .. }
         | Expectation::Exitcode { samples, .. }
         | Expectation::DoesNotApply { samples, .. }
-        | Expectation::Together { samples, .. } => *samples,
+        | Expectation::Together { samples, .. }
+        | Expectation::Stderr { samples, .. }
+        | Expectation::ConflictsVerbose { samples } => *samples,
     };
     if samples.len() != count_samples(sub) {
         return Some(format!(
@@ -567,6 +599,59 @@ fn check(help: &str, sub: &str, option: &str, expectation: &Expectation) -> Opti
                 samples,
             },
         ),
+        Expectation::Stderr {
+            baseline,
+            with,
+            samples,
+        } => {
+            if !flags_have(with, option) || flags_have(baseline, option) {
+                return Some(format!("{option} belongs only in the `with` call"));
+            }
+            if let Some(error) = require_not_other_option(option, with) {
+                return Some(error);
+            }
+            let files = paths(samples);
+            let left = run_case(sub, baseline, &files);
+            let right = run_case(sub, with, &files);
+            if left.code != Some(0)
+                || right.code != Some(0)
+                || left.stdout != right.stdout
+                || left.stderr == right.stderr
+                || !right.stderr.starts_with("context: ")
+            {
+                Some(format!(
+                    "stderr did not gain context: baseline status={:?} stderr={} with status={:?} stderr={}",
+                    left.code,
+                    shorten(&left.stderr),
+                    right.code,
+                    shorten(&right.stderr)
+                ))
+            } else {
+                None
+            }
+        }
+        Expectation::ConflictsVerbose { samples } => {
+            let files = paths(samples);
+            let alone = run_case(sub, &[option], &files);
+            let both = run_case(sub, &[option, "--verbose"], &files);
+            let plain = run_case(sub, &[], &files);
+            if alone.code != Some(0)
+                || alone.stdout != plain.stdout
+                || !alone.stderr.is_empty()
+                || both.code != Some(3)
+                || !both.stdout.is_empty()
+            {
+                Some(format!(
+                    "quiet: alone status={:?} stderr={} both status={:?} stderr={}",
+                    alone.code,
+                    shorten(&alone.stderr),
+                    both.code,
+                    shorten(&both.stderr)
+                ))
+            } else {
+                None
+            }
+        }
     }
 }
 

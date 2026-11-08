@@ -1,5 +1,6 @@
+use std::cell::Cell;
 use std::fs::File;
-use std::io::{self, Read, Write};
+use std::io::{self, IsTerminal, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
@@ -114,6 +115,51 @@ struct Cli {
     /// Count Prometheus metrics without a type as gauge or count.
     #[arg(long, global = true, value_enum, value_name = "KIND")]
     untyped_as: Option<UntypedAs>,
+
+    /// Hide the hint line. No context line.
+    #[arg(long, global = true, conflicts_with = "verbose")]
+    quiet: bool,
+
+    /// Print the hint line, and on success one context line on stderr.
+    #[arg(long, global = true, conflicts_with = "quiet")]
+    verbose: bool,
+}
+
+thread_local! {
+    /// Tip/hint lines. A terminal shows them. A pipe does not, unless `--verbose`.
+    static EXTRA: Cell<bool> = const { Cell::new(false) };
+}
+
+fn set_extra(extra: bool) {
+    EXTRA.with(|cell| cell.set(extra));
+}
+
+fn extra() -> bool {
+    EXTRA.with(|cell| cell.get())
+}
+
+/// `--quiet` hides hints even on a terminal. `--verbose` shows them even on a pipe.
+/// Both flags together are a clap usage error and never reach a report.
+fn extra_from_args() -> bool {
+    let mut quiet = false;
+    let mut verbose = false;
+    // `args()` panics when a path is not Unicode. `args_os` does not.
+    for arg in std::env::args_os().skip(1) {
+        if arg == "--" {
+            break;
+        } else if arg == "--quiet" {
+            quiet = true;
+        } else if arg == "--verbose" {
+            verbose = true;
+        }
+    }
+    if quiet {
+        false
+    } else if verbose {
+        true
+    } else {
+        io::stderr().is_terminal()
+    }
 }
 
 #[derive(Subcommand)]
@@ -179,6 +225,7 @@ enum UntypedAs {
 }
 
 fn main() -> ExitCode {
+    set_extra(extra_from_args());
     let command = Cli::command();
     match command.try_get_matches() {
         Ok(matches) => {
@@ -214,10 +261,17 @@ fn note(args: std::fmt::Arguments<'_>) {
     let _ = writeln!(err, "{args}");
 }
 
-/// Writes an error line, then a `hint:` line that says what the user can do.
+/// Writes an error line, then a `hint:` line when extra context is on.
+///
+/// Extra context is on for a terminal and for `--verbose`. A pipe, a redirect,
+/// and `--quiet` keep the first line only, so captured stderr stays one line.
 fn note_hint(args: std::fmt::Arguments<'_>, hint: &str) {
     let mut err = io::stderr().lock();
-    let _ = writeln!(err, "{args}\nhint: {hint}");
+    if extra() {
+        let _ = writeln!(err, "{args}\nhint: {hint}");
+    } else {
+        let _ = writeln!(err, "{args}");
+    }
 }
 
 /// Writes the report to stdout. A failed write is exit 2 and does not panic.
@@ -349,7 +403,15 @@ fn count_paths(cli: &Cli, paths: &[PathBuf], prices: Option<&Prices>) -> u8 {
     if write_report(&rendered) != EXIT_OK {
         return EXIT_INPUT;
     }
-    budget_status(cli.budget, report.total)
+    let status = budget_status(cli.budget, report.total);
+    if status == EXIT_OK && cli.verbose {
+        note(format_args!(
+            "context: samples {}, custom metrics {}",
+            all.len(),
+            report.total
+        ));
+    }
+    status
 }
 
 fn combination_rejection(cli: &Cli) -> Option<&'static str> {
@@ -414,7 +476,17 @@ fn diff_paths(cli: &Cli, old: &Path, new: &Path) -> u8 {
     if write_report(&rendered) != EXIT_OK {
         return EXIT_INPUT;
     }
-    budget_status(cli.budget, report.new_total)
+    let status = budget_status(cli.budget, report.new_total);
+    if status == EXIT_OK && cli.verbose {
+        note(format_args!(
+            "context: samples {}+{}, custom metrics {} -> {}",
+            old_samples.len(),
+            new_samples.len(),
+            report.old_total,
+            report.new_total
+        ));
+    }
+    status
 }
 
 fn usage_error(err: &CountError) -> u8 {

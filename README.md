@@ -43,7 +43,7 @@ From a local clone: `cargo install --locked --path .`, or `cargo build --release
 
 The binaries are built and smoke-tested on GitHub-hosted runners (Ubuntu, macOS, Windows). Building from source needs Rust 1.85 or newer on any platform Rust supports.
 
-The test suite has 291 automated tests; see [QUALITY.md](QUALITY.md) for how they were run.
+The test suite has 298 automated tests; see [QUALITY.md](QUALITY.md) for how they were run.
 
 ## Quick start
 
@@ -245,10 +245,12 @@ Every option of `dd-metric-bill --help`. The same list is in the [reference](doc
 | `--top` | count and diff | Show only the N tag keys that add the most series, per metric. |
 | `--unbounded-threshold` | count | A tag key with more than N distinct values is unbounded. Default 50. On `diff`, passing the flag is rejected even when the value is 50. |
 | `--untyped-as` | count and diff, only with `--format prometheus` | Count a Prometheus metric that has no type as `gauge` or `count`. |
+| `--quiet` | count and diff | Hide the hint line, even on a terminal. No context line. |
+| `--verbose` | count and diff | Print the hint line even on a pipe, and on success one `context:` line on stderr. |
 | `--help` | everywhere | Show help and exit 0. |
 | `--version` | top level | Show the version (`dd-metric-bill 1.0.0`) and exit 0. |
 
-Only count accepts --explain, --plan, --hosts, --allow-tags, --prices and --unbounded-threshold. --hosts only works together with --plan. --untyped-as only works together with --format prometheus. Exit codes: 0 success, 1 budget exceeded, 2 input or parse error, 3 usage error. Every error on stderr is followed by a `hint:` line that says what you can do.
+Only count accepts --explain, --plan, --hosts, --allow-tags, --prices and --unbounded-threshold. --hosts only works together with --plan. --untyped-as only works together with --format prometheus. Exit codes: 0 success, 1 budget exceeded, 2 input or parse error, 3 usage error. On a terminal, or with `--verbose`, an error on stderr is followed by a `hint:` line that says what you can do. A pipe, a redirect, or `--quiet` keeps only the first line. `--verbose` also writes one `context:` line on stderr after a successful report. `--quiet` together with `--verbose` exits 3.
 
 ### Shell completions
 

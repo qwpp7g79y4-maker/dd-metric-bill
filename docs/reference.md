@@ -26,6 +26,8 @@ Run `dd-metric-bill --help` or `dd-metric-bill count --help` for the built-in he
 | `--top` | count and diff | Show only the N tag keys that add the most series, per metric. |
 | `--unbounded-threshold` | count | A tag key with more than N distinct values is unbounded. Default 50. On `diff`, passing the flag is rejected even when the value is 50. |
 | `--untyped-as` | count and diff, only with `--format prometheus` | Count a Prometheus metric that has no type as `gauge` or `count`. |
+| `--quiet` | count and diff | Hide the hint line, even on a terminal. No context line. |
+| `--verbose` | count and diff | Print the hint line even on a pipe, and on success one `context:` line on stderr. |
 | `--help` | everywhere | Show help and exit 0. |
 | `--version` | top level | Show the version (`dd-metric-bill 1.0.0`) and exit 0. |
 
@@ -122,7 +124,7 @@ Each metric has `name`, `type`, `combinations`, `count`, `rule`, and `rule_text`
 
 ## Exit codes and usage errors
 
-Besides exit 3 usage errors, an error for an unreadable file, a line that does not parse, an invalid price file, an exceeded budget, or a count that does not fit has a second stderr line that starts with `hint:` and says what you can do. The first line is the message described in this page.
+Besides exit 3 usage errors, an error for an unreadable file, a line that does not parse, an invalid price file, an exceeded budget, or a count that does not fit has, on a terminal or with `--verbose`, a second stderr line that starts with `hint:` and says what you can do. A pipe, a redirect, or `--quiet` prints only the first line. The first line is the message described in this page. `--verbose` also writes one `context:` line on stderr after a successful report. `--quiet` together with `--verbose` exits 3.
 
 | Code | Meaning |
 | --- | --- |

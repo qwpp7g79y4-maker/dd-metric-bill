@@ -26,6 +26,8 @@ De tekst die de binary schrijft is Engels. De voorbeelden en de foutmeldingen hi
 | `--top` | count en diff | Alleen de N tagsleutels die de meeste series toevoegen, per metric. |
 | `--unbounded-threshold` | count | Een tagsleutel met meer dan N verschillende waarden is onbegrensd. Standaard 50. Bij `diff` wordt de vlag geweigerd, ook als de waarde 50 is. |
 | `--untyped-as` | count en diff, alleen met `--format prometheus` | Een Prometheus-metric zonder type telt als `gauge` of `count`. |
+| `--quiet` | count en diff | Verberg de `hint:`-regel, ook op een terminal. Geen contextregel. |
+| `--verbose` | count en diff | Print de `hint:`-regel ook bij een pipe, en bij succes één `context:`-regel op stderr. |
 | `--help` | overal | Toon hulp en exitcode 0. |
 | `--version` | bovenaan | Toon de versie (`dd-metric-bill 1.0.0`) en exitcode 0. |
 
@@ -124,7 +126,7 @@ Elke metric heeft `name`, `type`, `combinations`, `count`, `rule` en `rule_text`
 
 ## Exitcodes en gebruiksfouten
 
-Bij een onleesbaar bestand, een regel die niet parseert, een ongeldig prijsbestand, een overschreden budget of een telling die niet past staat op stderr een tweede regel die met `hint:` begint en zegt wat je kunt doen. De eerste regel is de melding zoals op deze pagina beschreven.
+Bij een onleesbaar bestand, een regel die niet parseert, een ongeldig prijsbestand, een overschreden budget of een telling die niet past staat op een terminal, of met `--verbose`, op stderr een tweede regel die met `hint:` begint en zegt wat je kunt doen. Een pipe, een redirect of `--quiet` print alleen de eerste regel. De eerste regel is de melding zoals op deze pagina beschreven. `--verbose` schrijft bij een gelukt verslag ook één `context:`-regel op stderr. `--quiet` samen met `--verbose` eindigt met exitcode 3.
 
 | Code | Betekenis |
 | --- | --- |

@@ -40,7 +40,9 @@ fn check_stderr(code: Option<i32>, stderr: &str, want: i32, what: &str) {
 }
 
 fn check(args: &[&str], stdin: &[u8], want: i32, what: &str) {
-    let (code, stdout, stderr) = run(args, stdin);
+    let mut full = vec!["--verbose"];
+    full.extend_from_slice(args);
+    let (code, stdout, stderr) = run(&full, stdin);
     assert!(stdout.is_empty(), "{args:?}: {stdout}");
     check_stderr(code, &stderr, want, what);
 }
@@ -125,7 +127,7 @@ fn invalid_content_says_how_to_fix_it() {
 fn duplicate_price_key_says_which_key_to_remove() {
     let prices = Temp::new("dup", "{\"a\":1,\"a\":2}");
     let ok = fixture("quickstart.dogstatsd");
-    let (code, stdout, stderr) = run(&["count", "--prices", prices.s(), &ok], b"");
+    let (code, stdout, stderr) = run(&["--verbose", "count", "--prices", prices.s(), &ok], b"");
     assert!(stdout.is_empty(), "{stdout}");
     assert_eq!(code, Some(2), "{stderr}");
     let (what, hint) = stderr.split_once("hint: ").expect("hint line");
@@ -135,7 +137,7 @@ fn duplicate_price_key_says_which_key_to_remove() {
 #[test]
 fn budget_exceeded_says_what_to_reduce() {
     let ok = fixture("quickstart.dogstatsd");
-    let (code, _stdout, stderr) = run(&["count", "--budget", "0", &ok], b"");
+    let (code, _stdout, stderr) = run(&["--verbose", "count", "--budget", "0", &ok], b"");
     check_stderr(code, &stderr, 1, "budget exceeded");
 }
 
@@ -201,8 +203,8 @@ fn full_stdout_says_how_to_recover() {
         return;
     }
     let ok = fixture("quickstart.dogstatsd");
-    let (code, stderr) = with_full_stdout(&["count", &ok]);
+    let (code, stderr) = with_full_stdout(&["--verbose", "count", &ok]);
     check_stderr(code, &stderr, 2, "could not write the report");
-    let (code, stderr) = with_full_stdout(&["--help"]);
+    let (code, stderr) = with_full_stdout(&["--verbose", "--help"]);
     check_stderr(code, &stderr, 3, "could not write the message");
 }

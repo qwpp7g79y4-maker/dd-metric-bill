@@ -650,6 +650,7 @@ fn histogram_overflow_escapes_the_metric_name_on_stderr() {
     let name = "m\u{1b}[2J";
     let sample = TempPath::text(&format!("{name}:1|h|#host:a\n{name}:1|h|#host:b\n"));
     let output = run(&[
+        "--verbose",
         "--histogram-aggregates",
         "9223372036854775808",
         "--histogram-percentiles",
@@ -788,7 +789,7 @@ fn nan_inf_and_inf_per_format() {
         "a:-Inf|c\n",
     ] {
         let path = TempPath::text(line);
-        let output = run(&["count", "--format", "dogstatsd", path.path()]);
+        let output = run(&["--verbose", "count", "--format", "dogstatsd", path.path()]);
         assert_eq!(output.status.code(), Some(2), "{line}{}", failure(&output));
         assert!(output.stdout.is_empty(), "{line}{}", failure(&output));
         let stderr = String::from_utf8(output.stderr).expect("stderr is utf-8");
@@ -819,7 +820,7 @@ fn nan_inf_and_inf_per_format() {
         let path = TempPath::text(&format!(
             "{{\"metric\":\"{marker}\",\"type\":\"count\",\"value\":{token}}}\n"
         ));
-        let output = run(&["count", "--format", "jsonl", path.path()]);
+        let output = run(&["--verbose", "count", "--format", "jsonl", path.path()]);
         assert_eq!(
             output.status.code(),
             Some(2),

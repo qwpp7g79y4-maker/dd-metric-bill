@@ -89,12 +89,49 @@ fn assert_jsonl_duplicate(body: &str, line_no: usize) {
     let bad_path = bad.path();
     let good_path = good.path();
     let calls: Vec<Vec<&str>> = vec![
-        vec!["count", "--format", "jsonl", bad_path],
-        vec!["count", "--json", "--format", "jsonl", bad_path],
-        vec!["diff", "--format", "jsonl", good_path, bad_path],
-        vec!["diff", "--format", "jsonl", bad_path, good_path],
-        vec!["diff", "--json", "--format", "jsonl", good_path, bad_path],
-        vec!["diff", "--json", "--format", "jsonl", bad_path, good_path],
+        vec!["--verbose", "count", "--format", "jsonl", bad_path],
+        vec![
+            "--verbose",
+            "count",
+            "--json",
+            "--format",
+            "jsonl",
+            bad_path,
+        ],
+        vec![
+            "--verbose",
+            "diff",
+            "--format",
+            "jsonl",
+            good_path,
+            bad_path,
+        ],
+        vec![
+            "--verbose",
+            "diff",
+            "--format",
+            "jsonl",
+            bad_path,
+            good_path,
+        ],
+        vec![
+            "--verbose",
+            "diff",
+            "--json",
+            "--format",
+            "jsonl",
+            good_path,
+            bad_path,
+        ],
+        vec![
+            "--verbose",
+            "diff",
+            "--json",
+            "--format",
+            "jsonl",
+            bad_path,
+            good_path,
+        ],
     ];
     for call in calls {
         let output = run(&call);
@@ -107,8 +144,21 @@ fn assert_price_duplicate(body: &str) {
     let sample = empty_sample();
     let price_path = price.path();
     let calls: Vec<Vec<&str>> = vec![
-        vec!["count", "--prices", price_path, sample.as_str()],
-        vec!["count", "--json", "--prices", price_path, sample.as_str()],
+        vec![
+            "--verbose",
+            "count",
+            "--prices",
+            price_path,
+            sample.as_str(),
+        ],
+        vec![
+            "--verbose",
+            "count",
+            "--json",
+            "--prices",
+            price_path,
+            sample.as_str(),
+        ],
     ];
     for call in calls {
         let output = run(&call);

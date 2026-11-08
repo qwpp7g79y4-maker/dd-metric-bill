@@ -43,7 +43,7 @@ Vanuit een lokale clone: `cargo install --locked --path .`, of `cargo build --re
 
 De binaries worden gebouwd en met een rooktest gecontroleerd op runners van GitHub (Ubuntu, macOS, Windows). Bouwen vanuit de broncode vraagt Rust 1.85 of nieuwer op elk platform dat Rust ondersteunt.
 
-De testsuite heeft 291 automatische tests; zie [QUALITY.nl.md](QUALITY.nl.md) voor hoe ze zijn gedraaid.
+De testsuite heeft 298 automatische tests; zie [QUALITY.nl.md](QUALITY.nl.md) voor hoe ze zijn gedraaid.
 
 ## Snel aan de slag
 
@@ -245,10 +245,12 @@ Elke optie van `dd-metric-bill --help`. Dezelfde lijst staat in de [referentie](
 | `--top` | count en diff | Alleen de N tagsleutels die de meeste series toevoegen, per metric. |
 | `--unbounded-threshold` | count | Een tagsleutel met meer dan N verschillende waarden is onbegrensd. Standaard 50. Bij `diff` wordt de vlag geweigerd, ook als de waarde 50 is. |
 | `--untyped-as` | count en diff, alleen met `--format prometheus` | Een Prometheus-metric zonder type telt als `gauge` of `count`. |
+| `--quiet` | count en diff | Verberg de `hint:`-regel, ook op een terminal. Geen contextregel. |
+| `--verbose` | count en diff | Print de `hint:`-regel ook bij een pipe, en bij succes één `context:`-regel op stderr. |
 | `--help` | overal | Toon hulp en exitcode 0. |
 | `--version` | bovenaan | Toon de versie (`dd-metric-bill 1.0.0`) en exitcode 0. |
 
-Alleen count accepteert --explain, --plan, --hosts, --allow-tags, --prices en --unbounded-threshold. --hosts werkt alleen samen met --plan. --untyped-as werkt alleen samen met --format prometheus. Exitcodes: 0 gelukt, 1 budget overschreden, 2 invoer- of parsefout, 3 gebruiksfout. Na elke fout op stderr staat een `hint:`-regel die zegt wat je kunt doen.
+Alleen count accepteert --explain, --plan, --hosts, --allow-tags, --prices en --unbounded-threshold. --hosts werkt alleen samen met --plan. --untyped-as werkt alleen samen met --format prometheus. Exitcodes: 0 gelukt, 1 budget overschreden, 2 invoer- of parsefout, 3 gebruiksfout. Op een terminal, of met `--verbose`, volgt na een fout op stderr een `hint:`-regel die zegt wat je kunt doen. Een pipe, een redirect of `--quiet` houdt alleen de eerste regel. `--verbose` schrijft bij een gelukt verslag ook één `context:`-regel op stderr. `--quiet` samen met `--verbose` eindigt met exitcode 3.
 
 ### Shell-completions
 

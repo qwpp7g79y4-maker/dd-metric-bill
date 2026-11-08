@@ -91,6 +91,12 @@ Unique values above N mark an unbounded tag. The default is 50. Only count accep
 .B --untyped-as \fIKIND\fR
 Count Prometheus metrics without a type as gauge or count. Possible values: gauge, count. This option only works together with --format prometheus.
 .TP
+.B --quiet
+Hide the hint line, even when stderr is a terminal. No context line.
+.TP
+.B --verbose
+Print the hint line even when stderr is a pipe, and on success one context line on stderr.
+.TP
 .B -h , --help
 Print help. Exit 0 when the help text can be written.
 .TP
@@ -103,6 +109,8 @@ The report was printed, or help or version was printed. With --budget, the total
 .TP
 .B 1
 --budget was exceeded. The report is still printed on standard output. Standard error is one line: budget exceeded: TOTAL > LIMIT.
+On a terminal, or with --verbose, a second line starts with hint:.
+A pipe, a redirect, or --quiet keeps the one line.
 .TP
 .B 2
 The sample or the price file cannot be read or is invalid, or the report cannot be written. A failed report write does not panic.
