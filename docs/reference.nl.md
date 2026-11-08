@@ -27,7 +27,7 @@ De tekst die de binary schrijft is Engels. De voorbeelden en de foutmeldingen hi
 | `--unbounded-threshold` | count | Een tagsleutel met meer dan N verschillende waarden is onbegrensd. Standaard 50. Bij `diff` wordt de vlag geweigerd, ook als de waarde 50 is. |
 | `--untyped-as` | count en diff, alleen met `--format prometheus` | Een Prometheus-metric zonder type telt als `gauge` of `count`. |
 | `--help` | overal | Toon hulp en exitcode 0. |
-| `--version` | bovenaan | Toon de versie (`dd-metric-bill 0.1.2`) en exitcode 0. |
+| `--version` | bovenaan | Toon de versie (`dd-metric-bill 1.0.0`) en exitcode 0. |
 
 Alleen count accepteert --explain, --plan, --hosts, --allow-tags, --prices en --unbounded-threshold. --hosts werkt alleen samen met --plan. --untyped-as werkt alleen samen met --format prometheus.
 

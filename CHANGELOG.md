@@ -4,7 +4,9 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
-The next release will be 0.2.0, because of the breaking changes below.
+## [1.0.0]
+
+The previous version is 0.1.2. The changes below, including the breaking ones, are in 1.0.0.
 
 ### Added
 

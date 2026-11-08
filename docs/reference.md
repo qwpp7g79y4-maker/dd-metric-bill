@@ -27,7 +27,7 @@ Run `dd-metric-bill --help` or `dd-metric-bill count --help` for the built-in he
 | `--unbounded-threshold` | count | A tag key with more than N distinct values is unbounded. Default 50. On `diff`, passing the flag is rejected even when the value is 50. |
 | `--untyped-as` | count and diff, only with `--format prometheus` | Count a Prometheus metric that has no type as `gauge` or `count`. |
 | `--help` | everywhere | Show help and exit 0. |
-| `--version` | top level | Show the version (`dd-metric-bill 0.1.2`) and exit 0. |
+| `--version` | top level | Show the version (`dd-metric-bill 1.0.0`) and exit 0. |
 
 Only count accepts --explain, --plan, --hosts, --allow-tags, --prices and --unbounded-threshold. --hosts only works together with --plan. --untyped-as only works together with --format prometheus.
 
