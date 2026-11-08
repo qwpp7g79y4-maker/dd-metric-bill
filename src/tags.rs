@@ -180,6 +180,24 @@ pub struct MetricUnbounded {
     pub name: String,
     pub kind: Kind,
     pub keys: Vec<UnboundedTag>,
+    /// What dropping every unbounded key would save. `None` until
+    /// [`crate::advice::add_advice`] runs, and when dropping saves nothing.
+    pub advice: Option<DropAdvice>,
+}
+
+/// Billable count of one metric before and after its unbounded keys are dropped.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DropAdvice {
+    pub before: u64,
+    pub after: u64,
+}
+
+impl DropAdvice {
+    /// Billable metrics saved.
+    #[must_use]
+    pub fn saved(&self) -> u64 {
+        self.before.saturating_sub(self.after)
+    }
 }
 
 struct UnboundedGroup {
@@ -219,6 +237,7 @@ pub fn unbounded_tags(samples: &[Sample], threshold: u64) -> Vec<MetricUnbounded
                     name,
                     kind: group.kind,
                     keys,
+                    advice: None,
                 })
             }
         })

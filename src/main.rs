@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use clap::{CommandFactory, FromArgMatches, Parser, Subcommand, ValueEnum};
+use dd_metric_bill::advice::add_advice;
 use dd_metric_bill::allow::{parse_allow_tags, simulate};
 use dd_metric_bill::cost::{estimate_cost, parse_prices, Prices};
 use dd_metric_bill::count::{
@@ -263,7 +264,16 @@ fn count_paths(cli: &Cli, paths: &[PathBuf], prices: Option<&Prices>) -> u8 {
         Err(err) => return usage_error(&err),
     };
     let tags = tag_breakdown(&all, cli.top);
-    let unbounded = unbounded_tags(&all, cli.unbounded_threshold);
+    let mut unbounded = unbounded_tags(&all, cli.unbounded_threshold);
+    if let Err(err) = add_advice(
+        &mut unbounded,
+        &all,
+        cli.histogram_aggregates,
+        cli.histogram_percentiles,
+        cli.percentiles,
+    ) {
+        return usage_error(&err);
+    }
     let cost = prices.map(|prices| {
         estimate_cost(
             prices,
