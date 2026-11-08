@@ -133,6 +133,7 @@ Besides exit 3 usage errors, an error for an unreadable file, a line that does n
 | 1 | `--budget` exceeded. Stdout still has the report, unless `--output` wrote it to a file. Stderr is `budget exceeded: TOTAL > LIMIT`. |
 | 2 | The sample or the price file cannot be read or is invalid, or the report cannot be written. |
 | 3 | Usage error. Stdout is empty. `--help` and `--version` that cannot be written also exit 3. |
+| 130 | SIGINT. No half-written report. An existing `--output` file is kept when the new report was not finished. Stderr is `interrupted by SIGINT`. |
 
 When stdout cannot take the report, stderr is `could not write the report: REASON` and the exit code is 2. With `--output PATH` the report goes to that file and stdout stays empty. An existing file is replaced. A missing parent directory is not created; stderr starts with `could not write the report to` and the exit code is 2. `--help` and `--version` that cannot be written exit 3, and stderr is `could not write the message: REASON`. A failed write does not panic.
 

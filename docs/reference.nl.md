@@ -135,6 +135,7 @@ Bij een onleesbaar bestand, een regel die niet parseert, een ongeldig prijsbesta
 | 1 | `--budget` overschreden. Stdout heeft nog steeds het verslag, behalve als `--output` het naar een bestand schreef. Stderr is `budget exceeded: TOTAL > LIMIT`. |
 | 2 | Het sample of het prijsbestand kan niet gelezen worden of is ongeldig, of het verslag kan niet geschreven worden. |
 | 3 | Gebruiksfout. Stdout is leeg. `--help` en `--version` die niet geschreven kunnen worden geven ook exit 3. |
+| 130 | SIGINT. Geen half rapport. Een bestaand `--output`-bestand blijft staan als het nieuwe rapport niet af was. Stderr is `interrupted by SIGINT`. |
 
 Als stdout het verslag niet kan aannemen, is stderr `could not write the report: REASON` en de exitcode 2. Met `--output PATH` gaat het verslag naar dat bestand en blijft stdout leeg. Een bestaand bestand wordt overschreven. Een ontbrekende bovenliggende map wordt niet aangemaakt; stderr begint met `could not write the report to` en de exitcode is 2. `--help` en `--version` die niet geschreven kunnen worden geven exit 3, en stderr is `could not write the message: REASON`. Een mislukte schrijfactie geeft geen panic.
 

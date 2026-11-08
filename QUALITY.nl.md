@@ -7,7 +7,7 @@ Deze pagina laat zien hoe elke release van dd-metric-bill is gecontroleerd, wat 
 | | |
 |---|---|
 | Gecontroleerde commit | tak `prep/w24-fout`; de testregel is opnieuw gemeten na de test die uitgaande verbindingen blokkeert. De 100 MiB-regel en de dekkingsregel blijven de meting op `1dbd300`. |
-| Tests | 303 automatische tests, gedraaid in debugmodus met de standaardtoolchain (303 geslaagd, 0 mislukt, 0 genegeerd) |
+| Tests | 304 automatische tests, gedraaid in debugmodus met de standaardtoolchain (304 geslaagd, 0 mislukt, 0 genegeerd) |
 
 ### 2026-11-08 (W-45, offline telling met uitgaande verbindingen geblokkeerd, tak prep/w24-fout)
 
@@ -20,6 +20,13 @@ Deze pagina laat zien hoe elke release van dd-metric-bill is gecontroleerd, wat 
 
 - Elk sample, elk prijsbestand en standaardinvoer is hoogstens 268435456 bytes (256 MiB). Een grotere invoer eindigt met exit 2 met `file is larger than 268435456 bytes` en wordt niet ingelezen. De grens is nieuw. De gemeten invoer van 100 MiB blijft eronder. Het te grote bestand maakt de test in `/tmp` en wordt niet gecommit. Exitcodes blijven 0, 1, 2 en 3. Er is geen prijs en geen provider toegevoegd.
 - `cargo test --no-fail-fast`: 303 geslaagd / 0 mislukt / 0 genegeerd.
+- `cargo fmt --check`: schoon. `cargo clippy --all-targets -- -D warnings`: schoon.
+- Versie blijft 1.0.0. `rust-version` blijft 1.85.
+
+### 2026-11-08 (W-48, SIGINT, tak prep/w24-fout)
+
+- SIGINT eindigt met exit 130. Stderr is `interrupted by SIGINT`. Er blijft geen half rapport achter. `tests/sigint.rs` stuurt het signaal via een pidfd van het kind dat de test zelf startte. Gewone exitcodes blijven 0, 1, 2 en 3. Er is geen prijs en geen provider toegevoegd. De invoerlimiet blijft 268435456 bytes.
+- `cargo test --no-fail-fast`: 304 geslaagd / 0 mislukt / 0 genegeerd.
 - `cargo fmt --check`: schoon. `cargo clippy --all-targets -- -D warnings`: schoon.
 - Versie blijft 1.0.0. `rust-version` blijft 1.85.
 

@@ -1,3 +1,5 @@
+mod interrupt;
+
 use std::cell::Cell;
 use std::fs::File;
 use std::io::{self, IsTerminal, Read, Write};
@@ -234,18 +236,24 @@ enum UntypedAs {
 }
 
 fn main() -> ExitCode {
+    interrupt::install();
     set_extra(extra_from_args());
-    let command = Cli::command();
-    match command.try_get_matches() {
+    let code = match Cli::command().try_get_matches() {
         Ok(matches) => {
             let threshold_explicit = matches.value_source("unbounded_threshold")
                 == Some(clap::parser::ValueSource::CommandLine);
             match Cli::from_arg_matches(&matches) {
-                Ok(cli) => ExitCode::from(run(&cli, threshold_explicit)),
-                Err(err) => ExitCode::from(usage_exit(&err)),
+                Ok(cli) => run(&cli, threshold_explicit),
+                Err(err) => usage_exit(&err),
             }
         }
-        Err(err) => ExitCode::from(usage_exit(&err)),
+        Err(err) => usage_exit(&err),
+    };
+    if code == interrupt::EXIT_INTERRUPTED || interrupt::interrupted() {
+        note(format_args!("interrupted by SIGINT"));
+        ExitCode::from(interrupt::EXIT_INTERRUPTED)
+    } else {
+        ExitCode::from(code)
     }
 }
 
@@ -283,14 +291,44 @@ fn note_hint(args: std::fmt::Arguments<'_>, hint: &str) {
     }
 }
 
+/// Path of a temporary file next to `path`, so the finished report can replace
+/// `path` in one rename. SIGINT before that rename removes the temporary file
+/// and leaves `path` as it was.
+fn temp_beside(path: &Path) -> PathBuf {
+    let parent = path
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .unwrap_or_else(|| Path::new("."));
+    let mut name = std::ffi::OsString::from(".");
+    name.push(
+        path.file_name()
+            .unwrap_or_else(|| std::ffi::OsStr::new("report")),
+    );
+    name.push(format!(".dd-metric-bill-{}.tmp", std::process::id()));
+    parent.join(name)
+}
+
 /// Writes the report to stdout, or to `--output` when that path is set.
 /// A missing parent directory is not created. A failed write is exit 2.
+/// SIGINT returns [`interrupt::EXIT_INTERRUPTED`] and does not leave a partial file.
 fn write_report(path: Option<&Path>, text: &str) -> u8 {
+    if interrupt::interrupted() {
+        return interrupt::EXIT_INTERRUPTED;
+    }
     let Some(path) = path else {
-        let mut out = io::stdout().lock();
-        return match out.write_all(text.as_bytes()).and_then(|()| out.flush()) {
-            Ok(()) => EXIT_OK,
-            Err(err) => {
+        let result = interrupt::with_sigint_blocked(|| {
+            if interrupt::interrupted() {
+                return None;
+            }
+            let mut out = io::stdout().lock();
+            Some(out.write_all(text.as_bytes()).and_then(|()| out.flush()))
+        });
+        return match result {
+            None => interrupt::EXIT_INTERRUPTED,
+            Some(Ok(())) if interrupt::interrupted() => interrupt::EXIT_INTERRUPTED,
+            Some(Ok(())) => EXIT_OK,
+            Some(Err(_)) if interrupt::interrupted() => interrupt::EXIT_INTERRUPTED,
+            Some(Err(err)) => {
                 note_hint(
                     format_args!("could not write the report: {err}"),
                     "check that standard output is still open and has free space, or redirect it to a file",
@@ -299,12 +337,41 @@ fn write_report(path: Option<&Path>, text: &str) -> u8 {
             }
         };
     };
-    match File::create(path).and_then(|mut file| {
+    let tmp = temp_beside(path);
+    let created = File::create(&tmp).and_then(|mut file| {
         file.write_all(text.as_bytes())?;
         file.flush()
-    }) {
-        Ok(()) => EXIT_OK,
-        Err(err) => {
+    });
+    if let Err(err) = created {
+        let _ = std::fs::remove_file(&tmp);
+        if interrupt::interrupted() {
+            return interrupt::EXIT_INTERRUPTED;
+        }
+        note_hint(
+            format_args!("could not write the report to {}: {err}", path.display()),
+            "check that the parent directory exists and is writable; it is not created",
+        );
+        return EXIT_INPUT;
+    }
+    let renamed = interrupt::with_sigint_blocked(|| {
+        if interrupt::interrupted() {
+            return None;
+        }
+        Some(std::fs::rename(&tmp, path))
+    });
+    match renamed {
+        None => {
+            let _ = std::fs::remove_file(&tmp);
+            interrupt::EXIT_INTERRUPTED
+        }
+        Some(Ok(())) if interrupt::interrupted() => interrupt::EXIT_INTERRUPTED,
+        Some(Ok(())) => EXIT_OK,
+        Some(Err(_)) if interrupt::interrupted() => {
+            let _ = std::fs::remove_file(&tmp);
+            interrupt::EXIT_INTERRUPTED
+        }
+        Some(Err(err)) => {
+            let _ = std::fs::remove_file(&tmp);
             note_hint(
                 format_args!("could not write the report to {}: {err}", path.display()),
                 "check that the parent directory exists and is writable; it is not created",
@@ -426,8 +493,9 @@ fn count_paths(cli: &Cli, paths: &[PathBuf], prices: Option<&Prices>) -> u8 {
             cost.as_ref(),
         )
     };
-    if write_report(cli.output.as_deref(), &rendered) != EXIT_OK {
-        return EXIT_INPUT;
+    let written = write_report(cli.output.as_deref(), &rendered);
+    if written != EXIT_OK {
+        return written;
     }
     let status = budget_status(cli.budget, report.total);
     if status == EXIT_OK && cli.verbose {
@@ -499,8 +567,9 @@ fn diff_paths(cli: &Cli, old: &Path, new: &Path) -> u8 {
     } else {
         render_diff(&report)
     };
-    if write_report(cli.output.as_deref(), &rendered) != EXIT_OK {
-        return EXIT_INPUT;
+    let written = write_report(cli.output.as_deref(), &rendered);
+    if written != EXIT_OK {
+        return written;
     }
     let status = budget_status(cli.budget, report.new_total);
     if status == EXIT_OK && cli.verbose {
@@ -647,12 +716,17 @@ fn read_stdin_text(kind: &str) -> Result<String, u8> {
 /// and the rest is not kept.
 fn read_capped(reader: impl Read, kind: &str, path: &Path) -> Result<String, u8> {
     let mut text = String::new();
-    match reader.take(MAX_INPUT_BYTES + 1).read_to_string(&mut text) {
+    match interrupt::StopOnSigint::new(reader)
+        .take(MAX_INPUT_BYTES + 1)
+        .read_to_string(&mut text)
+    {
+        Ok(_) if interrupt::interrupted() => Err(interrupt::EXIT_INTERRUPTED),
         Ok(_) if text.len() as u64 > MAX_INPUT_BYTES => {
             refuse_too_large(kind, path);
             Err(EXIT_INPUT)
         }
         Ok(_) => Ok(text),
+        Err(_) if interrupt::interrupted() => Err(interrupt::EXIT_INTERRUPTED),
         Err(err) => {
             refuse_read(kind, path, err);
             Err(EXIT_INPUT)

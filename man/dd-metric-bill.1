@@ -126,6 +126,9 @@ The sample or the price file cannot be read or is invalid, or the report cannot 
 .TP
 .B 3
 Usage error, including an unknown option, a missing argument, or an option combination the help text rejects. Standard output is empty. --help and --version that cannot be written also exit 3, and that failure does not panic.
+.TP
+.B 130
+Interrupted by SIGINT. The report is not left half-written. An existing output file is kept when the new report was not finished. Standard error is "interrupted by SIGINT".
 .SH EXAMPLES
 Count the fictional DogStatsD sample shipped in this repository. The default format is dogstatsd, so --format is not required. The exit code is 0.
 .PP
