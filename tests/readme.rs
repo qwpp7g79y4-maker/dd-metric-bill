@@ -691,3 +691,51 @@ fn ships(files: &[String], trees: &[String], path: &str) -> bool {
         .iter()
         .any(|dir| path == dir || path.starts_with(&format!("{dir}/")))
 }
+
+/// The commands of the "Aan de slag in 5 minuten" section of both READMEs,
+/// run literally through `sh` with the freshly built binary first on `PATH`.
+#[test]
+fn five_minute_section_commands_run_literally() {
+    // (exit code, text that must be on stdout) per command, in order.
+    let expected: [(i32, &str); 5] = [
+        (0, "total: 1"),
+        (0, "total: 4"),
+        (0, "\"allotment\": null"),
+        (0, "delta: 1"),
+        (0, "price: USD per 100"),
+    ];
+    let bin_dir = PathBuf::from(env!("CARGO_BIN_EXE_dd-metric-bill"))
+        .parent()
+        .expect("binary directory")
+        .to_path_buf();
+    let mut path = std::ffi::OsString::from(&bin_dir);
+    path.push(":");
+    path.push(std::env::var_os("PATH").unwrap_or_default());
+    for page in [README, README_NL] {
+        let text = read(page);
+        let part = section(&text, "## Aan de slag in 5 minuten");
+        let block: Vec<&str> = part
+            .split("```sh\n")
+            .nth(1)
+            .and_then(|rest| rest.split("\n```").next())
+            .unwrap_or_else(|| panic!("{page}: no sh block"))
+            .lines()
+            .collect();
+        assert_eq!(block.len(), expected.len(), "{page}: command count");
+        for (line, (code, needle)) in block.iter().zip(expected) {
+            for banned in ["/var/log", "journalctl", "http://", "https://", "sudo"] {
+                assert!(!line.contains(banned), "{page}: {line} uses {banned}");
+            }
+            let out = Command::new("sh")
+                .arg("-c")
+                .arg(line)
+                .current_dir(env!("CARGO_MANIFEST_DIR"))
+                .env("PATH", &path)
+                .output()
+                .expect("start sh");
+            let stdout = String::from_utf8_lossy(&out.stdout);
+            assert_eq!(out.status.code(), Some(code), "{page}: {line}\n{stdout}");
+            assert!(stdout.contains(needle), "{page}: {line}\n{stdout}");
+        }
+    }
+}

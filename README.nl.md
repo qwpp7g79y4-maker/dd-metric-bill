@@ -43,7 +43,7 @@ Vanuit een lokale clone: `cargo install --locked --path .`, of `cargo build --re
 
 De binaries worden gebouwd en met een rooktest gecontroleerd op runners van GitHub (Ubuntu, macOS, Windows). Bouwen vanuit de broncode vraagt Rust 1.85 of nieuwer op elk platform dat Rust ondersteunt.
 
-De testsuite heeft 278 automatische tests; zie [QUALITY.nl.md](QUALITY.nl.md) voor hoe ze zijn gedraaid.
+De testsuite heeft 279 automatische tests; zie [QUALITY.nl.md](QUALITY.nl.md) voor hoe ze zijn gedraaid.
 
 ## Snel aan de slag
 
@@ -172,6 +172,26 @@ Niets hiervan heeft een Datadog API-key nodig: het leest alleen verkeer of logs 
 `count` en `diff` lezen ook standaardinvoer als een sample-pad `-` is, bijvoorbeeld `tail -n 2000 pipeline.jsonl | dd-metric-bill count --format jsonl -`; uitvoer en exitcode zijn hetzelfde als voor een echt bestand met dezelfde bytes.
 
 Prijzen komen alleen uit een JSON-bestand dat je met `--prices` meegeeft; zie [het prijsbestand](docs/reference.nl.md#prijsbestand). Elke tekstuitvoer eindigt met `estimate: Datadog bills the hourly average over the month; this is one snapshot (source: B1)`. Alle opties, exitcodes en foutmeldingen staan in de [referentie](docs/reference.nl.md) en in `dd-metric-bill --help`.
+
+## Aan de slag in 5 minuten
+
+Vijf opdrachten, offline, op de verzonnen samples in `examples/` en `tests/fixtures/`. Ze hebben geen netwerk, geen Datadog-account en geen TUI nodig en lezen geen systeemlogs. Draai ze in de hoofdmap van een kloon, met `dd-metric-bill` op je `PATH` (na `cargo install --locked --path .`, of gebruik `target/release/dd-metric-bill`). Een test draait de opdrachten in dit blok letterlijk.
+
+```sh
+dd-metric-bill count examples/page.dogstatsd
+dd-metric-bill count tests/fixtures/b1-count.dogstatsd
+dd-metric-bill count --json examples/webshop.dogstatsd
+dd-metric-bill diff tests/fixtures/diff-old.dogstatsd tests/fixtures/diff-new.dogstatsd
+dd-metric-bill count examples/webshop.dogstatsd --prices prices/datadog-example.json
+```
+
+1. Tel één DogStatsD-regel: totaal 1.
+2. Het uitgewerkte voorbeeld uit de Datadog-documentatie: totaal 4.
+3. Het webshop-sample als één JSON-object.
+4. Vergelijk twee samples: het totaal gaat van 3 naar 4.
+5. Het webshop-sample met het prijsbestand `prices/datadog-example.json`, dat de prijs, de bron en de datum aan de uitvoer toevoegt.
+
+Alle vijf geven exit 0. Sla voor je eigen data een sample op als DogStatsD, JSON-regels of Prometheus-tekst en geef het bestand door; zie [Snel aan de slag](#snel-aan-de-slag).
 
 ## Voorbeeld
 

@@ -43,7 +43,7 @@ From a local clone: `cargo install --locked --path .`, or `cargo build --release
 
 The binaries are built and smoke-tested on GitHub-hosted runners (Ubuntu, macOS, Windows). Building from source needs Rust 1.85 or newer on any platform Rust supports.
 
-The test suite has 278 automated tests; see [QUALITY.md](QUALITY.md) for how they were run.
+The test suite has 279 automated tests; see [QUALITY.md](QUALITY.md) for how they were run.
 
 ## Quick start
 
@@ -172,6 +172,26 @@ None of this needs a Datadog API key: it only reads traffic or logs your own app
 `count` and `diff` also read standard input when a sample path is `-`, for example `tail -n 2000 pipeline.jsonl | dd-metric-bill count --format jsonl -`; output and exit code are the same as for a real file with the same bytes.
 
 Prices come only from a JSON file you pass with `--prices`; see [the price file format](docs/reference.md#price-file). Every text output ends with `estimate: Datadog bills the hourly average over the month; this is one snapshot (source: B1)`. All options, exit codes, and error messages are listed in the [reference](docs/reference.md) and in `dd-metric-bill --help`.
+
+## Aan de slag in 5 minuten
+
+Five commands, offline, on the invented samples in `examples/` and `tests/fixtures/`. They need no network, no Datadog account and no TUI, and read no system logs. Run them from the root of a clone, with `dd-metric-bill` on your `PATH` (after `cargo install --locked --path .`, or use `target/release/dd-metric-bill`). A test runs the commands in this block literally.
+
+```sh
+dd-metric-bill count examples/page.dogstatsd
+dd-metric-bill count tests/fixtures/b1-count.dogstatsd
+dd-metric-bill count --json examples/webshop.dogstatsd
+dd-metric-bill diff tests/fixtures/diff-old.dogstatsd tests/fixtures/diff-new.dogstatsd
+dd-metric-bill count examples/webshop.dogstatsd --prices prices/datadog-example.json
+```
+
+1. Count one DogStatsD line: total 1.
+2. The worked example from the Datadog documentation: total 4.
+3. The webshop sample as one JSON object.
+4. Compare two samples: the total goes from 3 to 4.
+5. The webshop sample with the price file `prices/datadog-example.json`, which adds the price, its source and its date to the output.
+
+All five exit 0. For your own data, save a sample as DogStatsD, JSON lines or Prometheus text and pass the file; see [Quick start](#quick-start).
 
 ## Example
 

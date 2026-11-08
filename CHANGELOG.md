@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- README.md and README.nl.md: section "Aan de slag in 5 minuten" with five offline commands on `examples/`, `tests/fixtures/` and `prices/`. `tests/readme.rs` runs them literally.
 - `count` adds an advice line for each metric with unbounded tag keys: the billable count with and without those keys. JSON output gets an `advice` object under `unbounded`.
 
 ### Changed
