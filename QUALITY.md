@@ -8,6 +8,7 @@ This page shows how each release of dd-metric-bill was checked, what we found, a
 |---|---|
 | Commit checked | `6e278ab` plus the working-tree change that adds the "Aan de slag in 5 minuten" section and its test |
 | Tests | 280 automated tests, run in debug mode with the default toolchain (280 passed, 0 failed, 0 ignored) |
+| Line coverage | `cargo llvm-cov --no-fail-fast`, measured 2026-11-08: 97.04% of lines (144 of 4871 missed); goal above 90% met, no tests added for it |
 
 ### Measured on 100 MiB of input
 
