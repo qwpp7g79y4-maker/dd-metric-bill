@@ -7,7 +7,7 @@ Deze pagina laat zien hoe elke release van dd-metric-bill is gecontroleerd, wat 
 | | |
 |---|---|
 | Gecontroleerde commit | `6e278ab` plus de werkboomwijziging die de sectie "Aan de slag in 5 minuten" en de test toevoegt |
-| Tests | 279 automatische tests, gedraaid in debugmodus met de standaardtoolchain (279 geslaagd, 0 mislukt, 0 genegeerd) |
+| Tests | 280 automatische tests, gedraaid in debugmodus met de standaardtoolchain (280 geslaagd, 0 mislukt, 0 genegeerd) |
 
 ### Wat is toegevoegd
 
@@ -31,7 +31,7 @@ Deze pagina laat zien hoe elke release van dd-metric-bill is gecontroleerd, wat 
 
 ### Hoe we controleerden
 
-- `cargo test --no-fail-fast`: 279 geslaagd, 0 mislukt, 0 genegeerd, exit 0. Releasemodus en Rust 1.85 zijn voor deze commit niet gedraaid.
+- `cargo test --no-fail-fast`: 280 geslaagd, 0 mislukt, 0 genegeerd, exit 0. Releasemodus en Rust 1.85 zijn voor deze commit niet gedraaid.
 - `cargo clippy --all-targets -- -D warnings`: exit 0. `cargo fmt --check`: exit 0 (de crate `fuzz/` is niet gecontroleerd).
 - `cargo +nightly fuzz build`: exit 0 op een eerdere commit (`09d370a`); niet opnieuw gedraaid voor deze commit.
 - Elk van de 7 fuzz-targets draaide 660 seconden op één vastgezette CPU-kern, achter elkaar (in totaal ongeveer 77 minuten):

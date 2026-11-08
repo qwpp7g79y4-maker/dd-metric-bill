@@ -45,3 +45,15 @@ fn api_gateway_prometheus_matches_the_golden_output() {
         "examples/api-gateway.expected.txt",
     );
 }
+
+#[test]
+fn page_dogstatsd_example_is_accepted() {
+    let output = Command::new(env!("CARGO_BIN_EXE_dd-metric-bill"))
+        .args(["count", "examples/page.dogstatsd"])
+        .current_dir(root())
+        .output()
+        .expect("run the binary");
+    assert_eq!(output.status.code(), Some(0));
+    assert!(output.stderr.is_empty());
+    assert!(!output.stdout.is_empty());
+}
