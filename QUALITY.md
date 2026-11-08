@@ -7,7 +7,7 @@ This page shows how each release of dd-metric-bill was checked, what we found, a
 | | |
 |---|---|
 | Commit checked | `6e278ab` plus the working-tree change that adds the "Aan de slag in 5 minuten" section and its test |
-| Tests | 280 automated tests, run in debug mode with the default toolchain (280 passed, 0 failed, 0 ignored) |
+| Tests | 291 automated tests, run in debug mode with the default toolchain (291 passed, 0 failed, 0 ignored) |
 | Line coverage | `cargo llvm-cov --no-fail-fast`, measured 2026-11-08: 97.04% of lines (144 of 4871 missed); goal above 90% met, no tests added for it |
 
 ### Measured on 100 MiB of input
@@ -42,7 +42,7 @@ Peak memory in the first run: 105112 KB. This is one machine and one input shape
 
 ### How we checked
 
-- `cargo test --no-fail-fast`: 280 passed, 0 failed, 0 ignored, exit 0. Release mode and Rust 1.85 were not run for this commit.
+- `cargo test --no-fail-fast`: 291 passed, 0 failed, 0 ignored, exit 0. Release mode and Rust 1.85 were not run for this commit.
 - `cargo clippy --all-targets -- -D warnings`: exit 0. `cargo fmt --check`: exit 0 (the `fuzz/` crate was not checked).
 - `cargo +nightly fuzz build`: exit 0 on an earlier commit (`09d370a`); not re-run for this commit.
 - Each of the 7 fuzz targets ran 660 seconds on one pinned CPU core, sequentially (about 77 minutes in total):
