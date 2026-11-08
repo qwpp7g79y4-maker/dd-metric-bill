@@ -6,7 +6,7 @@ Deze pagina laat zien hoe elke release van dd-metric-bill is gecontroleerd, wat 
 
 | | |
 |---|---|
-| Gecontroleerde commit | `6e278ab` plus de werkboomwijziging die de sectie "Aan de slag in 5 minuten" en de test toevoegt |
+| Gecontroleerde commit | `1dbd300` (tak `prep/w24-fout`) |
 | Tests | 291 automatische tests, gedraaid in debugmodus met de standaardtoolchain (291 geslaagd, 0 mislukt, 0 genegeerd) |
 
 ### Wat is toegevoegd

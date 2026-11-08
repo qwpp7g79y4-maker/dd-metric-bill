@@ -6,13 +6,13 @@ This page shows how each release of dd-metric-bill was checked, what we found, a
 
 | | |
 |---|---|
-| Commit checked | `6e278ab` plus the working-tree change that adds the "Aan de slag in 5 minuten" section and its test |
+| Commit checked | `1dbd300` (branch `prep/w24-fout`) |
 | Tests | 291 automated tests, run in debug mode with the default toolchain (291 passed, 0 failed, 0 ignored) |
 | Line coverage | `cargo llvm-cov --no-fail-fast`, measured 2026-11-08: 97.04% of lines (144 of 4871 missed); goal above 90% met, no tests added for it |
 
 ### Measured on 100 MiB of input
 
-Measured 2026-11-08 on the release build (`cargo build --release`), base commit `da1bd88`. Input: synthetic, fictional DogStatsD lines in the format of `examples/webshop.dogstatsd`, exactly 104857600 bytes (100 MiB), kept in `/tmp`, not in the repository.
+Measured 2026-11-08 on the release build (`cargo build --release`), base commit `1dbd300` (branch `prep/w24-fout`). Input: synthetic, fictional DogStatsD lines in the format of `examples/webshop.dogstatsd`, exactly 104857600 bytes (100 MiB), kept in `/tmp`, not in the repository.
 
 | Command | Input size | Measured seconds | Exit code |
 |---|---|---|---|

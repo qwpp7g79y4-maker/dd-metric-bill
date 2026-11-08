@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- The README and the quality reports state the measured test count: 278.
+- The README and the quality reports state the measured test count: 291.
 
 ## [1.0.0] - 2026-11-08
 
