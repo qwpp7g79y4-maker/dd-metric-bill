@@ -9,6 +9,16 @@ This page shows how each release of dd-metric-bill was checked, what we found, a
 | Commit checked | `6e278ab` plus the working-tree change that adds the "Aan de slag in 5 minuten" section and its test |
 | Tests | 280 automated tests, run in debug mode with the default toolchain (280 passed, 0 failed, 0 ignored) |
 
+### Measured on 100 MiB of input
+
+Measured 2026-11-08 on the release build (`cargo build --release`), base commit `da1bd88`. Input: synthetic, fictional DogStatsD lines in the format of `examples/webshop.dogstatsd`, exactly 104857600 bytes (100 MiB), kept in `/tmp`, not in the repository.
+
+| Command | Input size | Measured seconds | Exit code |
+|---|---|---|---|
+| `dd-metric-bill count /tmp/w26-in/dd-100MiB.dogstatsd` | 104857600 bytes | 0.15, 0.15, 0.15 (three runs, wall clock, `/usr/bin/time`) | 0 |
+
+Peak memory in the first run: 105112 KB. This is one machine and one input shape (identical lines, so few distinct series). It says nothing about other hardware or other inputs.
+
 ### What was added
 
 - A `fuzz/` crate (cargo-fuzz, not part of the published package) with one target per untrusted-input stage, each checking an invariant rather than just calling the code:
