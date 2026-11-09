@@ -43,7 +43,7 @@ From a local clone: `cargo install --locked --path .`, or `cargo build --release
 
 The binaries are built and smoke-tested on GitHub-hosted runners (Ubuntu, macOS, Windows). Building from source needs Rust 1.85 or newer on any platform Rust supports.
 
-The test suite has 305 automated tests; see [QUALITY.md](QUALITY.md) for how they were run.
+The test suite has 305 automated tests (305 passed, 0 failed, 0 ignored), measured on commit `6da67b8` plus these changes. See [QUALITY.md](QUALITY.md) for how they were run.
 
 ## Quick start
 

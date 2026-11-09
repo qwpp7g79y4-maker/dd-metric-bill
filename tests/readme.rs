@@ -240,7 +240,7 @@ fn readme_has_the_sections() {
     assert!(requirements.contains("macOS 11") && release.contains("macos_min: \"11.0\""));
     let security = read("SECURITY.md");
     assert!(security.contains("pep_ai@icloud.com"));
-    assert!(security.contains("| 0.1.x | Yes |"));
+    assert!(security.contains("| 1.0.x | Yes |"));
     assert!(readme.contains("nicholas-ruest/series-budget"));
     assert!(!readme.contains("--show-values` exists"));
 }
