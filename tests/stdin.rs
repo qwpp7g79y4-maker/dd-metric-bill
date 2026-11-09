@@ -169,6 +169,7 @@ fn empty_stdin_matches_empty_file() {
 /// `--prices -` is out of scope: only the sample path reads `-`. A FIFO is
 /// unaffected by the stdin feature and keeps the existing rejection.
 #[test]
+#[cfg(not(coverage))]
 fn fifo_sample_is_still_rejected_unlike_stdin() {
     let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join("stdin-fifo-dir");
     let _ = std::fs::remove_dir_all(&dir);

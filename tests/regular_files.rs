@@ -190,7 +190,7 @@ fn dev_zero_is_not_a_regular_file() {
 }
 
 #[test]
-#[cfg(unix)]
+#[cfg(all(unix, not(coverage)))]
 fn fifo_without_writer_is_not_a_regular_file() {
     let tmp = TempDir::new();
     let fifo = tmp.join("pipe");
