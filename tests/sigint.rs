@@ -147,6 +147,7 @@ fn stop_child(child: &mut Child, pidfd: &PidFd) -> std::process::ExitStatus {
 }
 
 #[test]
+#[cfg(not(coverage))]
 fn sigint_on_blocked_stdin_writes_no_report_and_exits_130() {
     let root = scratch();
     let report = root.0.join("report.txt");
