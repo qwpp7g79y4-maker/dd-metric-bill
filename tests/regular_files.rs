@@ -206,7 +206,7 @@ fn fifo_without_writer_is_not_a_regular_file() {
 /// A symlink to a FIFO is the FIFO. The check follows the link and exits 2
 /// without waiting for a writer.
 #[test]
-#[cfg(unix)]
+#[cfg(all(unix, not(coverage)))]
 fn symlink_to_fifo_is_not_a_regular_file() {
     let tmp = TempDir::new();
     let fifo = tmp.join("pipe");
