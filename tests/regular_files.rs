@@ -339,7 +339,7 @@ fn file_name_that_is_not_utf8_works() {
 /// The path is a regular file at the check and a symlink to a FIFO at the open.
 /// The process must exit 2 within 2 seconds, not block in `open`.
 #[test]
-#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+#[cfg(all(target_os = "linux", target_arch = "x86_64", not(coverage)))]
 fn symlink_becomes_fifo_between_check_and_read() {
     let tmp = TempDir::new();
     let real = tmp.write_file("real.dogstatsd", "a:1|c\n");
