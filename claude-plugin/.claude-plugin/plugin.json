@@ -1,0 +1,22 @@
+{
+  "name": "dd-metric-bill",
+  "displayName": "Datadog Metric Bill",
+  "version": "0.1.2",
+  "description": "Estimate how many billable Datadog custom metrics a local sample produces, offline, without talking to Datadog.",
+  "author": {
+    "name": "PEPAI",
+    "url": "https://github.com/qwpp7g79y4-maker"
+  },
+  "homepage": "https://github.com/qwpp7g79y4-maker/dd-metric-bill",
+  "repository": "https://github.com/qwpp7g79y4-maker/dd-metric-bill",
+  "license": "MIT OR Apache-2.0",
+  "keywords": [
+    "datadog",
+    "metrics",
+    "cost",
+    "observability",
+    "cli"
+  ],
+  "documentationUrl": "https://github.com/qwpp7g79y4-maker/dd-metric-bill",
+  "supportUrl": "https://github.com/qwpp7g79y4-maker/dd-metric-bill/issues"
+}
