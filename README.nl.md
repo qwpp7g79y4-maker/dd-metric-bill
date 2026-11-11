@@ -18,7 +18,9 @@ Datadog rekent custom metrics af per unieke combinatie van metricnaam en tagwaar
 
 ## Installatie
 
-Met Rust 1.85 of nieuwer installeer je vanaf [crates.io](https://crates.io/crates/dd-metric-bill):
+Versie 1.0.0 is release-klaar en nog niet gepubliceerd. `cargo install dd-metric-bill` vanaf [crates.io](https://crates.io/crates/dd-metric-bill) geeft nog 0.1.2. Versie 1.0.0 komt uit de bron: `cargo install --locked --path .`.
+
+Met Rust 1.85 of nieuwer is de crate op [crates.io](https://crates.io/crates/dd-metric-bill) nog 0.1.2:
 
 ```sh
 cargo install --locked dd-metric-bill
