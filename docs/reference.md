@@ -26,8 +26,11 @@ Run `dd-metric-bill --help` or `dd-metric-bill count --help` for the built-in he
 | `--top` | count and diff | Show only the N tag keys that add the most series, per metric. |
 | `--unbounded-threshold` | count | A tag key with more than N distinct values is unbounded. Default 50. On `diff`, passing the flag is rejected even when the value is 50. |
 | `--untyped-as` | count and diff, only with `--format prometheus` | Count a Prometheus metric that has no type as `gauge` or `count`. |
+| `--quiet` | count and diff | Hide the hint line, even on a terminal. No context line. |
+| `--verbose` | count and diff | Print the hint line even on a pipe, and on success one `context:` line on stderr. |
+| `--output` | count and diff | Write the report to this file instead of stdout. An existing file is replaced. A missing parent directory is not created and exits 2. |
 | `--help` | everywhere | Show help and exit 0. |
-| `--version` | top level | Show the version (`dd-metric-bill 0.1.2`) and exit 0. |
+| `--version` | top level | Show the version (`dd-metric-bill 1.0.0`) and exit 0. A debug build also prints the git commit when git provides one. |
 
 Only count accepts --explain, --plan, --hosts, --allow-tags, --prices and --unbounded-threshold. --hosts only works together with --plan. --untyped-as only works together with --format prometheus.
 
@@ -73,11 +76,11 @@ DogStatsD types: `c` count, `g` gauge, `h` histogram, `d` distribution, `ms` his
 
 **Allotment.** Pro is 100 per host, Enterprise is 200 per host (B1, Allocation). Hosts come from `--hosts` or from the distinct `host` values in the sample. Without an allowlist the usage is the total, which is indexed, and the text says `usage: N (total, indexed)`. With an allowlist, indexed and ingested are each set against the allotment. Surplus is 0 when usage is not above the allotment.
 
-**One host per line.** Hosts are the distinct values of the key `host`. The key `HOST` is a different key. One line may carry one value of `host`. Two different values on that line are invalid (exit 2). DogStatsD: `m:1|c|#host:a,host:b`. JSON lines: `"tags":["host:a","host:b"]`. Prometheus: `{host="a",host="b"}`. The reason is `host has more than one value`. The message names the format and the line number. The same value twice (`host:a,host:a`) is one host. Other keys may repeat on one line, as Datadog allows. Spaces around a tag are ignored, and the order of the two host values does not matter.
+**One host per line.** Hosts are the distinct values of the key `host`. Tags are lowercased, as Datadog stores them, so `HOST` is the key `host` and `Env:Prod` equals `env:prod`. Metric names stay case sensitive. One line may carry one value of `host`. Two different values on that line are invalid (exit 2). DogStatsD: `m:1|c|#host:a,host:b`. JSON lines: `"tags":["host:a","host:b"]`. Prometheus: `{host="a",host="b"}`. The reason is `host has more than one value`. The message names the format and the line number. The same value twice (`host:a,host:a`) is one host. Other keys may repeat on one line, as Datadog allows. Spaces around a tag are ignored, and the order of the two host values does not matter.
 
 **Tags.** Per key: how many distinct values it has, and how many series disappear when that key is removed (`added`). `--top N` keeps the N keys with the largest `added`. Keys sort by `added`, then by number of values, then by name.
 
-**Unbounded.** A key is unbounded when it has more distinct values than `--unbounded-threshold`, or when a value matches a pattern: a UUID (`8-4-4-4-12` hex), a hex id of at least 16 hex digits with at least one letter a-f, a numeric id of at least 6 digits, or a pod name `name-hash-hash` whose hash parts are at least 5 alphanumeric characters. Reasons in the output are `threshold`, `pattern uuid`, `pattern hex-id`, `pattern numeric-id`, and `pattern pod-name`. The values themselves are not printed. Status codes such as `200` are shorter than 6 digits, so they are not a numeric id.
+**Unbounded.** A key is unbounded when it has more distinct values than `--unbounded-threshold`, or when a value matches a pattern: a UUID (`8-4-4-4-12` hex), a hex id of at least 16 hex digits with at least one letter a-f, a numeric id of at least 6 digits, or a pod name `name-hash-hash` whose hash parts are at least 5 alphanumeric characters. Reasons in the output are `threshold`, `pattern uuid`, `pattern hex-id`, `pattern numeric-id`, and `pattern pod-name`. The values themselves are not printed. For each metric with unbounded keys, `count` adds an advice line: `advice: drop <keys> count: <before> -> <after> saves: <n>`. It is the billable count with and without all unbounded keys of that metric, using the same factors as the count; it is omitted when dropping saves nothing. In JSON the metric entry under `unbounded` gets `advice` with `drop`, `count_before`, `count_after`, and `saved`. Status codes such as `200` are shorter than 6 digits, so they are not a numeric id.
 
 **Diff.** Per metric name and kind: old count, new count, and delta. Metrics only in the new sample are listed under `new:`. Metrics only in the old sample are listed under `removed:`. Tag keys show old and new values and added series. `--budget` compares against the new total.
 
@@ -122,16 +125,23 @@ Each metric has `name`, `type`, `combinations`, `count`, `rule`, and `rule_text`
 
 ## Exit codes and usage errors
 
+Besides exit 3 usage errors, an error for an unreadable file, a line that does not parse, an invalid price file, an exceeded budget, or a count that does not fit has, on a terminal or with `--verbose`, a second stderr line that starts with `hint:` and says what you can do. A pipe, a redirect, or `--quiet` prints only the first line. The first line is the message described in this page. `--verbose` also writes one `context:` line on stderr after a successful report. `--quiet` together with `--verbose` exits 3.
+
 | Code | Meaning |
 | --- | --- |
 | 0 | The report was printed. With `--budget`, the total is not above N. |
-| 1 | `--budget` exceeded. Stdout still has the report. Stderr is `budget exceeded: TOTAL > LIMIT`. |
+| 1 | `--budget` exceeded. Stdout still has the report, unless `--output` wrote it to a file. Stderr is `budget exceeded: TOTAL > LIMIT`. |
 | 2 | The sample or the price file cannot be read or is invalid, or the report cannot be written. |
 | 3 | Usage error. Stdout is empty. `--help` and `--version` that cannot be written also exit 3. |
+| 130 | SIGINT. No half-written report. An existing `--output` file is kept when the new report was not finished. Stderr is `interrupted by SIGINT`. |
 
-When stdout cannot take the report, stderr is `could not write the report: REASON` and the exit code is 2. `--help` and `--version` that cannot be written exit 3, and stderr is `could not write the message: REASON`. A failed write does not panic.
+When stdout cannot take the report, stderr is `could not write the report: REASON` and the exit code is 2. With `--output PATH` the report goes to that file and stdout stays empty. An existing file is replaced. A missing parent directory is not created; stderr starts with `could not write the report to` and the exit code is 2. `--help` and `--version` that cannot be written exit 3, and stderr is `could not write the message: REASON`. A failed write does not panic.
 
 A sample and a price file must be regular files. The path is opened without waiting, and only that opened file is read. A symlink is followed. A directory, FIFO, device, or other non-regular path is not read, so a FIFO with no writer does not hang. The type comes from the opened file, so a path that becomes a FIFO does not make the read wait. The message is `cannot read sample: PATH: REASON` or `cannot read price file: PATH: REASON`, and `REASON` includes `not a regular file` when the path is not a regular file.
+
+A path of `-` for `count` or `diff` reads standard input.
+
+Each sample and each price file is at most 268435456 bytes (256 MiB). Standard input has the same limit. A larger input is not loaded. The exit code is 2. The message is `cannot read sample: PATH: file is larger than 268435456 bytes` or `cannot read price file: PATH: file is larger than 268435456 bytes`.
 
 A price file that is not valid JSON, not an object, or has a bad field prints `invalid price file: PATH: DETAIL`. `DETAIL` is one of: `not valid json`, `not an object`, `missing field: FIELD`, `empty field: FIELD`, `field is not text: FIELD`, `field is not a number: FIELD`, `field is negative: FIELD`, `field is too large: FIELD`, `unknown field`. A key repeated at the top level prints `price file has a duplicate key` and nothing else: no path and no file text.
 

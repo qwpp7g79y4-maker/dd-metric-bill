@@ -63,13 +63,14 @@ pub fn parse_dogstatsd(input: &str) -> Result<Vec<Sample>, ParseError> {
     let input = super::without_bom(input);
     let mut samples = Vec::new();
     let mut seen = super::FirstLines::new();
+    let mut pool = super::Pool::default();
     for (idx, raw) in input.lines().enumerate() {
         let line_no = idx + 1;
         let line = raw.trim();
         if line.is_empty() || !seen.is_first(line) {
             continue;
         }
-        samples.push(parse_line(line, line_no)?);
+        samples.push(pool.sample(parse_line(line, line_no)?));
     }
     Ok(samples)
 }
@@ -90,7 +91,7 @@ fn parse_line(line: &str, line_no: usize) -> Result<Sample, ParseError> {
         return Err(ParseError::new("dogstatsd", line_no, super::HOST_CONFLICT));
     }
     Ok(Sample {
-        name: name.to_string(),
+        name: name.into(),
         kind: wire.kind(),
         tags,
         d10: false,
@@ -199,7 +200,7 @@ fn parse_tags(raw: &str) -> Result<Vec<Tag>, Reason> {
             }
             None => (piece.to_string(), None),
         };
-        tags.push(Tag { key, value });
+        tags.push(Tag::lowercase(key, value));
     }
     Ok(tags)
 }
@@ -221,7 +222,7 @@ users.uniques:alice|s
         let samples = parse_dogstatsd(input).expect("valid sample");
         let got: Vec<_> = samples
             .iter()
-            .map(|sample| (sample.name.as_str(), sample.kind))
+            .map(|sample| (&*sample.name, sample.kind))
             .collect();
         assert_eq!(
             got,
@@ -248,12 +249,12 @@ checkout.amount:1|c|#host:a|@1
         assert_eq!(samples[0].kind, Kind::Gauge);
         assert_eq!(samples[1].kind, Kind::Count);
         for sample in &samples {
-            assert_eq!(sample.name, "checkout.amount");
+            assert_eq!(&*sample.name, "checkout.amount");
             assert_eq!(
                 sample.tags,
                 vec![Tag {
-                    key: "host".to_string(),
-                    value: Some("a".to_string()),
+                    key: "host".into(),
+                    value: Some("a".into()),
                 }]
             );
         }
@@ -266,15 +267,15 @@ checkout.amount:1|c|#host:a|@1
             samples[0].tags,
             vec![
                 Tag {
-                    key: "env".to_string(),
+                    key: "env".into(),
                     value: None,
                 },
                 Tag {
-                    key: "status".to_string(),
-                    value: Some("200".to_string()),
+                    key: "status".into(),
+                    value: Some("200".into()),
                 },
                 Tag {
-                    key: "debug".to_string(),
+                    key: "debug".into(),
                     value: None,
                 },
             ]

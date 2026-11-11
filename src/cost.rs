@@ -1,3 +1,7 @@
+//! Cost above the allotment, from a price file the caller supplies (B1).
+//!
+//! Amounts come only from that file.
+
 use std::fmt;
 
 use serde_json::{Map, Value};
@@ -26,8 +30,11 @@ struct PricePer100 {
 /// Price file that was read. The amounts come only from that file.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Prices {
+    /// `currency` text from the price file.
     pub currency: String,
+    /// `source` text from the price file.
     pub source: String,
+    /// `date` text from the price file.
     pub date: String,
     ingested_per_100: PricePer100,
     indexed_per_100: Option<PricePer100>,
@@ -36,11 +43,14 @@ pub struct Prices {
 /// Which volume the line prices (D6).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CostKind {
+    /// Volume counted over all tags (D6).
     Ingested,
+    /// Volume counted on the allowlist, or the ordinary count without one (D6).
     Indexed,
 }
 
 impl CostKind {
+    /// `ingested` or `indexed`.
     #[must_use]
     pub fn label(self) -> &'static str {
         match self {
@@ -56,17 +66,24 @@ impl CostKind {
 /// `amount` is that part times the price per 100, divided by 100.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CostLine {
+    /// Ingested or indexed.
     pub kind: CostKind,
+    /// Usage minus the allotment, or 0 when the usage is lower.
     pub above: u64,
+    /// Decimal text of [`CostLine::above`] times the price per 100, divided by 100.
     pub amount: String,
 }
 
 /// Source, date, and the cost lines that belong to a price file.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CostReport {
+    /// `currency` text from the price file.
     pub currency: String,
+    /// `source` text from the price file.
     pub source: String,
+    /// `date` text from the price file.
     pub date: String,
+    /// Cost lines. Empty without an allotment.
     pub lines: Vec<CostLine>,
 }
 
@@ -95,6 +112,7 @@ impl PriceError {
         Self { reason }
     }
 
+    /// True when the price file repeats a top-level key.
     #[must_use]
     pub fn is_duplicate_key(&self) -> bool {
         matches!(self.reason, Reason::DuplicateKey)

@@ -1,0 +1,146 @@
+.TH DD-METRIC-BILL 1 "November 2026" "dd-metric-bill 1.0.0" "User Commands"
+.SH NAME
+dd-metric-bill \- estimate the number of billable Datadog custom metrics in a sample
+.SH SYNOPSIS
+.nf
+Usage: dd-metric-bill [OPTIONS] <COMMAND>
+Usage: dd-metric-bill count [OPTIONS] <SAMPLE>...
+Usage: dd-metric-bill diff [OPTIONS] <OLD> <NEW>
+Usage: dd-metric-bill completions [OPTIONS] <SHELL>
+.fi
+.SH DESCRIPTION
+Estimate the number of billable Datadog custom metrics in a sample.
+.PP
+The top-level help lists three commands.
+.TP
+.B count
+Count billable custom metrics in one or more samples.
+.I SAMPLE
+is a sample file. \- reads standard input. At least one sample is required.
+.TP
+.B diff
+Compare two samples.
+.I OLD
+is the old sample. \- reads standard input.
+.I NEW
+is the new sample. \- reads standard input.
+.TP
+.B completions
+Print a shell completion script on standard output.
+.I SHELL
+is bash or zsh. The other options are accepted and ignored.
+.PP
+.nh
+Contracts with Metric Name pricing are not supported.
+Only count accepts --explain, --plan, --hosts, --allow-tags, --prices and --unbounded-threshold.
+--hosts only works together with --plan.
+--untyped-as only works together with --format prometheus.
+.hy
+.PP
+The same options are printed by
+.BR dd-metric-bill\ --help ,
+by
+.BR "dd-metric-bill count --help" ,
+and by
+.BR "dd-metric-bill diff --help" ,
+except
+.BR --version ,
+which only the top-level help lists.
+Passing an option that count accepts and diff does not accept makes diff exit 3, before it reads a sample or a price file.
+.PP
+Each sample and each price file may be at most 268435456 bytes (256 MiB).
+Standard input has the same limit.
+A larger input exits 2 and is not loaded.
+The message says
+.B file is larger than 268435456 bytes .
+.SH OPTIONS
+.TP
+.B --format \fIFORMAT\fR
+Input format: dogstatsd, jsonl or prometheus. The default is dogstatsd. Possible values: dogstatsd, jsonl, prometheus.
+.TP
+.B --json
+Write the output as JSON.
+.TP
+.B --explain
+Show the rule and the source for each metric. Only count accepts this option.
+.TP
+.B --hosts \fIN\fR
+Number of hosts for the allotment. Only count accepts this option, and only together with --plan.
+.TP
+.B --plan \fIPLAN\fR
+Plan for the allotment: pro or enterprise. Possible values: pro, enterprise. Only count accepts this option.
+.TP
+.B --histogram-aggregates \fIN\fR
+Number of histogram aggregates per tag combination. The default is 4.
+.TP
+.B --histogram-percentiles \fIN\fR
+Number of histogram percentiles per tag combination. The default is 1.
+.TP
+.B --percentiles
+Include percentiles for distribution metrics.
+.TP
+.B --allow-tags \fILIST\fR
+Comma-separated tag keys that may be indexed. Only count accepts this option.
+.TP
+.B --prices \fIFILE\fR
+Path to a price file (JSON). Only count accepts this option.
+.TP
+.B --budget \fIN\fR
+Fail if the number of custom metrics is above N. For diff, N is compared with the new total.
+.TP
+.B --top \fIN\fR
+Number of tag keys in the breakdown.
+.TP
+.B --unbounded-threshold \fIN\fR
+Unique values above N mark an unbounded tag. The default is 50. Only count accepts this option. On diff, passing the flag is rejected even when the value is the default.
+.TP
+.B --untyped-as \fIKIND\fR
+Count Prometheus metrics without a type as gauge or count. Possible values: gauge, count. This option only works together with --format prometheus.
+.TP
+.B --quiet
+Hide the hint line, even when stderr is a terminal. No context line.
+.TP
+.B --verbose
+Print the hint line even when stderr is a pipe, and on success one context line on stderr.
+.TP
+.B --output \fIPATH\fR
+Write the report to this file instead of standard output. An existing file is replaced. A missing parent directory is an error and is not created. Count and diff accept this option. The completions command ignores it.
+.TP
+.B -h , --help
+Print help. Exit 0 when the help text can be written.
+.TP
+.B -V , --version
+Print the crate version. Exit 0 when the version text can be written. A debug build also prints the git commit when git provides one. Shown by the top-level help only.
+.SH EXIT STATUS
+.TP
+.B 0
+The report was printed, or written to the file named by --output, or help or version was printed. With --budget, the total (for diff, the new total) is not above N.
+.TP
+.B 1
+--budget was exceeded. The report is still printed on standard output, or written to --output when that flag is set. Standard output stays empty when --output is set. Standard error is one line: budget exceeded: TOTAL > LIMIT.
+On a terminal, or with --verbose, a second line starts with hint:.
+A pipe, a redirect, or --quiet keeps the one line.
+.TP
+.B 2
+The sample or the price file cannot be read or is invalid, or the report cannot be written. A file larger than 268435456 bytes is this code. A failed report write does not panic.
+.TP
+.B 3
+Usage error, including an unknown option, a missing argument, or an option combination the help text rejects. Standard output is empty. --help and --version that cannot be written also exit 3, and that failure does not panic.
+.TP
+.B 130
+Interrupted by SIGINT. The report is not left half-written. An existing output file is kept when the new report was not finished. Standard error is "interrupted by SIGINT".
+.SH EXAMPLES
+Count the fictional DogStatsD sample shipped in this repository. The default format is dogstatsd, so --format is not required. The exit code is 0.
+.PP
+.nf
+.B dd-metric-bill count examples/page.dogstatsd
+.fi
+.PP
+The three help texts, and the version. Each exits 0 when it can be written.
+.PP
+.nf
+.B dd-metric-bill --help
+.B dd-metric-bill count --help
+.B dd-metric-bill diff --help
+.B dd-metric-bill --version
+.fi

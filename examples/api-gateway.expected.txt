@@ -1,0 +1,17 @@
+total: 11
+
+gateway_inflight type: gauge combinations: 2 count: 2 rule: D3
+  tag: instance values: 2 added: 1
+gateway_latency_seconds.bucket type: count combinations: 3 count: 3 rule: D10
+  tag: le values: 3 added: 2
+  tag: route values: 1 added: 0
+gateway_latency_seconds.count type: count combinations: 1 count: 1 rule: D10
+  tag: route values: 1 added: 0
+gateway_latency_seconds.sum type: count combinations: 1 count: 1 rule: D10
+  tag: route values: 1 added: 0
+gateway_requests_total type: count combinations: 4 count: 4 rule: D3
+  tag: code values: 4 added: 2
+  tag: method values: 2 added: 0
+  tag: route values: 1 added: 0
+
+estimate: Datadog bills the hourly average over the month; this is one snapshot (source: B1)

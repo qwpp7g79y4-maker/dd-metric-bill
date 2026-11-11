@@ -26,8 +26,11 @@ De tekst die de binary schrijft is Engels. De voorbeelden en de foutmeldingen hi
 | `--top` | count en diff | Alleen de N tagsleutels die de meeste series toevoegen, per metric. |
 | `--unbounded-threshold` | count | Een tagsleutel met meer dan N verschillende waarden is onbegrensd. Standaard 50. Bij `diff` wordt de vlag geweigerd, ook als de waarde 50 is. |
 | `--untyped-as` | count en diff, alleen met `--format prometheus` | Een Prometheus-metric zonder type telt als `gauge` of `count`. |
+| `--quiet` | count en diff | Verberg de `hint:`-regel, ook op een terminal. Geen contextregel. |
+| `--verbose` | count en diff | Print de `hint:`-regel ook bij een pipe, en bij succes één `context:`-regel op stderr. |
+| `--output` | count en diff | Schrijf het verslag naar dit bestand in plaats van stdout. Een bestaand bestand wordt overschreven. Een ontbrekende bovenliggende map wordt niet aangemaakt en eindigt met exitcode 2. |
 | `--help` | overal | Toon hulp en exitcode 0. |
-| `--version` | bovenaan | Toon de versie (`dd-metric-bill 0.1.2`) en exitcode 0. |
+| `--version` | bovenaan | Toon de versie (`dd-metric-bill 1.0.0`) en exitcode 0. Een debug-build toont ook de git-commit als git die geeft. |
 
 Alleen count accepteert --explain, --plan, --hosts, --allow-tags, --prices en --unbounded-threshold. --hosts werkt alleen samen met --plan. --untyped-as werkt alleen samen met --format prometheus.
 
@@ -75,7 +78,7 @@ DogStatsD-types: `c` count, `g` gauge, `h` histogram, `d` distribution, `ms` his
 
 **Allotment.** Pro is 100 per host, Enterprise is 200 per host (B1, Allocation). Hosts komen uit `--hosts` of uit de verschillende `host`-waarden in het sample. Zonder allowlist is het gebruik het totaal, en dat is indexed; de tekst zegt `usage: N (total, indexed)`. Met een allowlist worden indexed en ingested elk apart tegen de allotment gezet. Het overschot is 0 als het gebruik niet boven de allotment ligt.
 
-**Eén host per regel.** Hosts zijn de verschillende waarden van de sleutel `host`. De sleutel `HOST` is een andere sleutel. Eén regel mag één waarde van `host` hebben. Twee verschillende waarden op die regel zijn ongeldig (exit 2). DogStatsD: `m:1|c|#host:a,host:b`. JSON-regels: `"tags":["host:a","host:b"]`. Prometheus: `{host="a",host="b"}`. De reden is `host has more than one value`. De melding noemt het formaat en het regelnummer. Dezelfde waarde twee keer (`host:a,host:a`) is één host. Andere sleutels mogen op één regel herhaald worden, zoals Datadog dat toestaat. Spaties rond een tag tellen niet, en de volgorde van de twee hostwaarden maakt niet uit.
+**Eén host per regel.** Hosts zijn de verschillende waarden van de sleutel `host`. Tags worden in kleine letters gezet, zoals Datadog ze opslaat, dus `HOST` is de sleutel `host` en `Env:Prod` is gelijk aan `env:prod`. Metrieknamen blijven hoofdlettergevoelig. Eén regel mag één waarde van `host` hebben. Twee verschillende waarden op die regel zijn ongeldig (exit 2). DogStatsD: `m:1|c|#host:a,host:b`. JSON-regels: `"tags":["host:a","host:b"]`. Prometheus: `{host="a",host="b"}`. De reden is `host has more than one value`. De melding noemt het formaat en het regelnummer. Dezelfde waarde twee keer (`host:a,host:a`) is één host. Andere sleutels mogen op één regel herhaald worden, zoals Datadog dat toestaat. Spaties rond een tag tellen niet, en de volgorde van de twee hostwaarden maakt niet uit.
 
 **Tags.** Per sleutel: hoeveel verschillende waarden hij heeft, en hoeveel series verdwijnen als die sleutel wegvalt (`added`). `--top N` houdt de N sleutels met de grootste `added`. Sleutels sorteren op `added`, dan op het aantal waarden, dan op de naam.
 
@@ -124,16 +127,23 @@ Elke metric heeft `name`, `type`, `combinations`, `count`, `rule` en `rule_text`
 
 ## Exitcodes en gebruiksfouten
 
+Bij een onleesbaar bestand, een regel die niet parseert, een ongeldig prijsbestand, een overschreden budget of een telling die niet past staat op een terminal, of met `--verbose`, op stderr een tweede regel die met `hint:` begint en zegt wat je kunt doen. Een pipe, een redirect of `--quiet` print alleen de eerste regel. De eerste regel is de melding zoals op deze pagina beschreven. `--verbose` schrijft bij een gelukt verslag ook één `context:`-regel op stderr. `--quiet` samen met `--verbose` eindigt met exitcode 3.
+
 | Code | Betekenis |
 | --- | --- |
 | 0 | Het verslag is geschreven. Met `--budget` ligt het totaal niet boven N. |
-| 1 | `--budget` overschreden. Stdout heeft nog steeds het verslag. Stderr is `budget exceeded: TOTAL > LIMIT`. |
+| 1 | `--budget` overschreden. Stdout heeft nog steeds het verslag, behalve als `--output` het naar een bestand schreef. Stderr is `budget exceeded: TOTAL > LIMIT`. |
 | 2 | Het sample of het prijsbestand kan niet gelezen worden of is ongeldig, of het verslag kan niet geschreven worden. |
 | 3 | Gebruiksfout. Stdout is leeg. `--help` en `--version` die niet geschreven kunnen worden geven ook exit 3. |
+| 130 | SIGINT. Geen half rapport. Een bestaand `--output`-bestand blijft staan als het nieuwe rapport niet af was. Stderr is `interrupted by SIGINT`. |
 
-Als stdout het verslag niet kan aannemen, is stderr `could not write the report: REASON` en de exitcode 2. `--help` en `--version` die niet geschreven kunnen worden geven exit 3, en stderr is `could not write the message: REASON`. Een mislukte schrijfactie geeft geen panic.
+Als stdout het verslag niet kan aannemen, is stderr `could not write the report: REASON` en de exitcode 2. Met `--output PATH` gaat het verslag naar dat bestand en blijft stdout leeg. Een bestaand bestand wordt overschreven. Een ontbrekende bovenliggende map wordt niet aangemaakt; stderr begint met `could not write the report to` en de exitcode is 2. `--help` en `--version` die niet geschreven kunnen worden geven exit 3, en stderr is `could not write the message: REASON`. Een mislukte schrijfactie geeft geen panic.
 
 Een sample en een prijsbestand moeten gewone bestanden zijn. Het pad wordt geopend zonder te wachten, en alleen dat geopende bestand wordt gelezen. Een symlink wordt gevolgd. Een map, FIFO, device of ander niet-regulier pad wordt niet gelezen, zodat een FIFO zonder schrijver niet blijft hangen. Het type komt van het geopende bestand, zodat een pad dat een FIFO wordt het lezen niet laat wachten. De melding is `cannot read sample: PATH: REASON` of `cannot read price file: PATH: REASON`, en `REASON` bevat `not a regular file` als het pad geen gewoon bestand is.
+
+Een pad `-` bij `count` of `diff` leest standaardinvoer.
+
+Elk sample en elk prijsbestand is hoogstens 268435456 bytes (256 MiB). Standaardinvoer heeft dezelfde grens. Een grotere invoer wordt niet ingelezen. De exitcode is 2. De melding is `cannot read sample: PATH: file is larger than 268435456 bytes` of `cannot read price file: PATH: file is larger than 268435456 bytes`.
 
 Een prijsbestand dat geen geldige JSON is, geen object is, of een slecht veld heeft, schrijft `invalid price file: PATH: DETAIL`. `DETAIL` is een van: `not valid json`, `not an object`, `missing field: FIELD`, `empty field: FIELD`, `field is not text: FIELD`, `field is not a number: FIELD`, `field is negative: FIELD`, `field is too large: FIELD`, `unknown field`. Een sleutel die op het hoogste niveau twee keer voorkomt schrijft alleen `price file has a duplicate key`: geen pad en geen tekst uit het bestand.
 

@@ -1,0 +1,13 @@
+checkout.completed:1|c|#env:prod,service:webshop,region:eu-west-1,payment:card
+checkout.completed:1|c|#env:prod,service:webshop,region:eu-west-1,payment:ideal
+checkout.completed:1|c|#env:prod,service:webshop,region:us-east-1,payment:card
+checkout.completed:1|c|#env:prod,service:webshop,region:us-east-1,payment:paypal
+cart.items:3|g|#env:prod,service:webshop,host:web-1
+cart.items:5|g|#env:prod,service:webshop,host:web-2
+cart.items:2|g|#env:prod,service:webshop,host:web-3
+http.request.duration:120|h|#env:prod,service:webshop,route:/cart,status:200
+http.request.duration:340|h|#env:prod,service:webshop,route:/cart,status:500
+http.request.duration:95|h|#env:prod,service:webshop,route:/checkout,status:200
+search.latency:42|d|#env:prod,service:webshop,user_id:u-1001
+search.latency:51|d|#env:prod,service:webshop,user_id:u-1002
+search.latency:38|d|#env:prod,service:webshop,user_id:u-1003

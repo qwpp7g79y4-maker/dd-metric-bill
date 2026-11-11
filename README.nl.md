@@ -6,9 +6,9 @@ Schat offline hoeveel factureerbare Datadog custom metrics een sample oplevert, 
 
 [![crates.io](https://img.shields.io/crates/v/dd-metric-bill.svg)](https://crates.io/crates/dd-metric-bill) [![downloads](https://img.shields.io/crates/d/dd-metric-bill.svg)](https://crates.io/crates/dd-metric-bill) [![CI](https://github.com/qwpp7g79y4-maker/dd-metric-bill/actions/workflows/ci.yml/badge.svg)](https://github.com/qwpp7g79y4-maker/dd-metric-bill/actions/workflows/ci.yml) [![PEPAI gecontroleerd](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fqwpp7g79y4-maker%2Fdd-metric-bill%2Fmain%2F.github%2Fbadge.json)](QUALITY.nl.md) [![MSRV 1.85](https://img.shields.io/badge/MSRV-1.85-blue.svg)](https://github.com/qwpp7g79y4-maker/dd-metric-bill/blob/main/Cargo.toml) [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#licentie)
 
-[Installatie](#installatie) • [Snel aan de slag](#snel-aan-de-slag) • [Hoe het rekent](#hoe-het-rekent) • [Alternatieven](#vergelijking-met-alternatieven) • [Beperkingen](#beperkingen) • [Referentie](docs/reference.nl.md)
+[Installatie](#installatie) • [Snel aan de slag](#snel-aan-de-slag) • [Voorbeeld](#voorbeeld) • [Opties](#opties) • [Hoe het rekent](#hoe-het-rekent) • [Alternatieven](#vergelijking-met-alternatieven) • [Beperkingen](#beperkingen) • [Referentie](docs/reference.nl.md)
 
-dd-metric-bill is een opdrachtregelprogramma in Rust. Het leest één of meer samples op je eigen machine als DogStatsD-regels (`naam:waarde|type|#tag:waarde`), als JSON-regels of als Prometheus-tekst. Een custom metric is een unieke combinatie van metricnaam en tagwaarden, inclusief de `host`-tag. De volgorde van de tags telt niet. COUNT, RATE en GAUGE tellen als 1 per combinatie. Een histogram telt standaard 5 per combinatie: 4 aggregaties plus 1 percentiel. Een distribution telt 5 per combinatie, of 10 met `--percentiles`. Per tag-sleutel staat hoeveel unieke waarden die sleutel heeft en hoeveel series hij toevoegt. Onbegrensde tags (te veel waarden, of een patroon zoals een UUID) krijgen een reden. `--allow-tags` simuleert Metrics without Limits: ingested op alle tags, indexed op de allowlist. `diff` vergelijkt twee samples. `--budget N` geeft exitcode 1 als het totaal boven N ligt. `--plan` en `--hosts` tonen de allotment. `--prices` leest een prijsbestand en schat de kosten boven de allotment. `--json` schrijft dezelfde uitkomst als JSON. De standaarduitvoer toont sleutels en aantallen, niet de tagwaarden. Contracten met Metric Name pricing worden niet ondersteund. Alleen count accepteert --explain, --plan, --hosts, --allow-tags, --prices en --unbounded-threshold. --hosts werkt alleen samen met --plan. --untyped-as werkt alleen samen met --format prometheus. Het heeft geen account nodig en maakt geen netwerkverbinding.
+dd-metric-bill is een opdrachtregelprogramma in Rust. Het leest één of meer samples op je eigen machine als DogStatsD-regels (`naam:waarde|type|#tag:waarde`), als JSON-regels of als Prometheus-tekst. Een custom metric is een unieke combinatie van metricnaam en tagwaarden, inclusief de `host`-tag. De volgorde van de tags telt niet. COUNT, RATE en GAUGE tellen als 1 per combinatie. Een histogram telt standaard 5 per combinatie: 4 aggregaties plus 1 percentiel. Een distribution telt 5 per combinatie, of 10 met `--percentiles`. Per tag-sleutel staat hoeveel unieke waarden die sleutel heeft en hoeveel series hij toevoegt. Onbegrensde tags (te veel waarden, of een patroon zoals een UUID) krijgen een reden. `--allow-tags` simuleert Metrics without Limits: ingested op alle tags, indexed op de allowlist. `diff` vergelijkt twee samples. `--budget N` geeft exitcode 1 als het totaal boven N ligt. `--plan` en `--hosts` tonen de allotment. `--prices` leest een prijsbestand en schat de kosten boven de allotment. `--json` schrijft dezelfde uitkomst als JSON. De standaarduitvoer toont sleutels en aantallen, niet de tagwaarden. Contracten met Metric Name pricing worden niet ondersteund. Alleen count accepteert --explain, --plan, --hosts, --allow-tags, --prices en --unbounded-threshold. --hosts werkt alleen samen met --plan. --untyped-as werkt alleen samen met --format prometheus. Het heeft geen account nodig en maakt geen netwerkverbinding. `--histogram-aggregates` (standaard 4) is het aantal histogram-aggregaties per tagcombinatie, en `--histogram-percentiles` (standaard 1) is het aantal histogram-percentielen per tagcombinatie. `--top N` is het aantal tag-sleutels in de uitsplitsing.
 
 De uitvoer van de tool is Engels; de voorbeelden hieronder tonen die precies zoals de binary hem schrijft.
 
@@ -18,12 +18,14 @@ Datadog rekent custom metrics af per unieke combinatie van metricnaam en tagwaar
 
 ## Installatie
 
-Met Rust 1.85 of nieuwer installeer je vanaf [crates.io](https://crates.io/crates/dd-metric-bill):
+Versie 1.0.0 staat op [crates.io](https://crates.io/crates/dd-metric-bill). Met Rust 1.85 of nieuwer:
 
 ```sh
-cargo install --locked dd-metric-bill
+cargo install dd-metric-bill
 dd-metric-bill --help
 ```
+
+`cargo install --locked dd-metric-bill` zet de lockfile van de crate vast.
 
 Kant-en-klare binaries voor Linux (x86_64, glibc en musl), Windows (x86_64) en macOS (Intel en Apple Silicon), elk met een SHA-256-checksum, staan op de [Releases-pagina](https://github.com/qwpp7g79y4-maker/dd-metric-bill/releases). Pak het archief uit en zet `dd-metric-bill` in je `PATH`.
 
@@ -42,6 +44,8 @@ Vanuit een lokale clone: `cargo install --locked --path .`, of `cargo build --re
 | Windows x86_64 | `x86_64-pc-windows-msvc` | Windows 10 of nieuwer |
 
 De binaries worden gebouwd en met een rooktest gecontroleerd op runners van GitHub (Ubuntu, macOS, Windows). Bouwen vanuit de broncode vraagt Rust 1.85 of nieuwer op elk platform dat Rust ondersteunt.
+
+De testsuite heeft 305 automatische tests (305 geslaagd, 0 mislukt, 0 genegeerd), gemeten op commit `6da67b8` plus deze wijzigingen. Zie [QUALITY.nl.md](QUALITY.nl.md) voor hoe ze zijn gedraaid.
 
 ## Snel aan de slag
 
@@ -109,7 +113,151 @@ total: 0
 estimate: Datadog bills the hourly average over the month; this is one snapshot (source: B1)
 ```
 
+### Uitproberen met je eigen data
+
+Geen clone nodig: plak het shell-blok om de twee bestanden te maken en de telling te draaien. Het console-voorbeeld leest dezelfde bestanden uit `tests/fixtures/`, die ook in het release-archief zitten.
+
+```sh
+cat > quickstart.dogstatsd <<'LOG'
+checkout.count:1|c|#endpoint:pay,region:eu
+checkout.count:1|c|#endpoint:pay,region:us
+checkout.count:1|c|#endpoint:refund,region:eu
+LOG
+cat > quickstart-prices.json <<'JSON'
+{
+  "currency": "USD",
+  "source": "https://docs.datadoghq.com/account_management/billing/custom_metrics",
+  "date": "2026-10-07",
+  "ingested_per_100": 0.10
+}
+JSON
+dd-metric-bill count --plan pro --allow-tags endpoint,region --prices quickstart-prices.json quickstart.dogstatsd
+```
+
+```console
+$ dd-metric-bill count --plan pro --allow-tags endpoint,region --prices tests/fixtures/quickstart-prices.json tests/fixtures/quickstart.dogstatsd
+total: 3
+allotment: 0
+indexed: 3 surplus: 3
+ingested: 3 surplus: 3
+price: USD per 100
+source: https://docs.datadoghq.com/account_management/billing/custom_metrics
+date: 2026-10-07
+cost ingested: 0.003 USD
+
+checkout.count type: count combinations: 3 count: 3 rule: D3
+  ingested: 3 indexed: 3
+  tag: endpoint values: 2 added: 1
+  tag: region values: 2 added: 1
+
+estimate: Datadog bills the hourly average over the month; this is one snapshot (source: B1)
+```
+
+Dit sample tagt geen `host`, dus `--hosts` heeft niets om van af te leiden en de gratis toewijzing van het plan is 0: elke ingested combinatie boven die toewijzing is betaald, dus het hele volume staat in `cost ingested: 0.003 USD` tegen 0.10 USD per 100 (de echte Datadog-lijstprijs, gelezen 7 oktober 2026). Bij een sample dat wel `host` tagt, geef je `--hosts N` zelf mee, of tag je `host` en laat je het afleiden, om de gratis toewijzing eerst toegepast te zien. Zonder `--plan` is er geen toewijzing en geen kostenregel, alleen de `price:`/`source:`/`date:`-regels uit het prijsbestand.
+
+### Een sample uit je eigen opstelling halen
+
+dd-metric-bill leest een platte-tekst sample; het vangt zelf geen metrics op.
+
+- **Prometheus** (`--format prometheus`): scrape je eigen exporter-endpoint één keer, met je echte host en poort: `curl -s http://localhost:9100/metrics > sample.prom`.
+- **DogStatsD** (het standaardformaat): wijs je applicatie tijdelijk naar een wegwerp-UDP-listener in plaats van de echte Datadog Agent, en zet het daarna terug:
+  ```sh
+  nc -u -l 8126 > sample.dogstatsd &
+  # laat de applicatie 30-60 seconden zijn normale verkeer sturen, dan:
+  kill %1
+  ```
+  Gebruik een ongebruikte poort (`DD_DOGSTATSD_PORT` of het equivalent van je client) zodat dit niet met de echte Agent concurreert, en stop de listener zodra een typische verkeersburst is opgevangen.
+- **JSON lines** (`--format jsonl`): als een metrics-pipeline al één JSON-object per punt logt (`{"metric":...,"type":...,"tags":[...]}`), vang je een stuk van dat logbestand, bijvoorbeeld `tail -n 2000 pipeline.jsonl > sample.jsonl`.
+
+Niets hiervan heeft een Datadog API-key nodig: het leest alleen verkeer of logs die je eigen applicatie al produceert.
+
+`count` en `diff` lezen ook standaardinvoer als een sample-pad `-` is, bijvoorbeeld `tail -n 2000 pipeline.jsonl | dd-metric-bill count --format jsonl -`; uitvoer en exitcode zijn hetzelfde als voor een echt bestand met dezelfde bytes.
+
 Prijzen komen alleen uit een JSON-bestand dat je met `--prices` meegeeft; zie [het prijsbestand](docs/reference.nl.md#prijsbestand). Elke tekstuitvoer eindigt met `estimate: Datadog bills the hourly average over the month; this is one snapshot (source: B1)`. Alle opties, exitcodes en foutmeldingen staan in de [referentie](docs/reference.nl.md) en in `dd-metric-bill --help`.
+
+## Aan de slag in 5 minuten
+
+Vijf opdrachten, offline, op de verzonnen samples in `examples/` en `tests/fixtures/`. Ze hebben geen netwerk, geen Datadog-account en geen TUI nodig en lezen geen systeemlogs. Draai ze in de hoofdmap van een kloon, met `dd-metric-bill` op je `PATH` (na `cargo install --locked --path .`, of gebruik `target/release/dd-metric-bill`). Een test draait de opdrachten in dit blok letterlijk.
+
+```sh
+dd-metric-bill count examples/page.dogstatsd
+dd-metric-bill count tests/fixtures/b1-count.dogstatsd
+dd-metric-bill count --json examples/webshop.dogstatsd
+dd-metric-bill diff tests/fixtures/diff-old.dogstatsd tests/fixtures/diff-new.dogstatsd
+dd-metric-bill count examples/webshop.dogstatsd --prices prices/datadog-example.json
+```
+
+1. Tel één DogStatsD-regel: totaal 1.
+2. Het uitgewerkte voorbeeld uit de Datadog-documentatie: totaal 4.
+3. Het webshop-sample als één JSON-object.
+4. Vergelijk twee samples: het totaal gaat van 3 naar 4.
+5. Het webshop-sample met het prijsbestand `prices/datadog-example.json`, dat de prijs, de bron en de datum aan de uitvoer toevoegt.
+
+Alle vijf geven exit 0. Sla voor je eigen data een sample op als DogStatsD, JSON-regels of Prometheus-tekst en geef het bestand door; zie [Snel aan de slag](#snel-aan-de-slag).
+
+## Voorbeeld
+
+`examples/` bevat twee realistische maar fictieve samples en de exacte uitvoer van het programma voor elk: `webshop.dogstatsd` (DogStatsD, met een count, een gauge, een histogram en een distribution met de tag `user_id`) en `api-gateway.prom` (Prometheus-tekst). Een test draait beide en vergelijkt de uitvoer met `webshop.expected.txt` en `api-gateway.expected.txt`. Zie [examples/README.md](examples/README.md).
+
+```console
+$ dd-metric-bill count examples/webshop.dogstatsd
+total: 37
+
+cart.items type: gauge combinations: 3 count: 3 rule: D3
+  tag: host values: 3 added: 2
+  tag: env values: 1 added: 0
+  tag: service values: 1 added: 0
+checkout.completed type: count combinations: 4 count: 4 rule: D3
+  tag: payment values: 3 added: 2
+  tag: region values: 2 added: 1
+  tag: env values: 1 added: 0
+  tag: service values: 1 added: 0
+http.request.duration type: histogram combinations: 3 count: 15 rule: D4
+  tag: route values: 2 added: 1
+  tag: status values: 2 added: 1
+  tag: env values: 1 added: 0
+  tag: service values: 1 added: 0
+search.latency type: distribution combinations: 3 count: 15 rule: D5
+  tag: user_id values: 3 added: 2
+  tag: env values: 1 added: 0
+  tag: service values: 1 added: 0
+
+estimate: Datadog bills the hourly average over the month; this is one snapshot (source: B1)
+```
+
+De 37 is 3 gauge-series, 4 count-series, 3 histogram-series maal 5 en 3 distribution-series maal 5. `user_id` voegt 2 series toe aan `search.latency`; geef in productie elke gebruiker een eigen tagwaarde en dat getal groeit mee met je gebruikers.
+
+## Opties
+
+Elke optie van `dd-metric-bill --help`. Dezelfde lijst staat in de [referentie](docs/reference.nl.md#opties).
+
+| Optie | Geldt voor | Wat het doet |
+| --- | --- | --- |
+| `--format` | count en diff | Invoerformaat: `dogstatsd` (standaard), `jsonl` of `prometheus`. |
+| `--json` | count en diff | JSON-uitvoer met `schema_version` 1. Dezelfde uitkomst als de tekst. |
+| `--explain` | count | Na elke metric de regeltekst en de bron-URL. |
+| `--hosts` | count, alleen met `--plan` | Aantal hosts voor de allotment. Zonder deze optie zijn de hosts de verschillende waarden van de tag `host`. |
+| `--plan` | count | Allotment-plan: `pro` (100 custom metrics per host) of `enterprise` (200 per host). |
+| `--histogram-aggregates` | count en diff | Histogram-aggregaten per tagcombinatie. Standaard 4. |
+| `--histogram-percentiles` | count en diff | Histogram-percentielen per tagcombinatie. Standaard 1. De histogramfactor is de som van de twee. |
+| `--percentiles` | count en diff | Een distribution telt als 10 per combinatie in plaats van 5. |
+| `--allow-tags` | count | Komma-gescheiden tagsleutels die geïndexeerd mogen worden. Spaties rond een sleutel vallen weg. Lege stukken vallen weg. |
+| `--prices` | count | Pad naar een prijsbestand (JSON). |
+| `--budget` | count en diff | Exitcode 1 als het totaal (bij `diff` het nieuwe totaal) boven N ligt. Het verslag wordt wel geschreven. |
+| `--top` | count en diff | Alleen de N tagsleutels die de meeste series toevoegen, per metric. |
+| `--unbounded-threshold` | count | Een tagsleutel met meer dan N verschillende waarden is onbegrensd. Standaard 50. Bij `diff` wordt de vlag geweigerd, ook als de waarde 50 is. |
+| `--untyped-as` | count en diff, alleen met `--format prometheus` | Een Prometheus-metric zonder type telt als `gauge` of `count`. |
+| `--quiet` | count en diff | Verberg de `hint:`-regel, ook op een terminal. Geen contextregel. |
+| `--verbose` | count en diff | Print de `hint:`-regel ook bij een pipe, en bij succes één `context:`-regel op stderr. |
+| `--output` | count en diff | Schrijf het verslag naar dit bestand in plaats van stdout. Een bestaand bestand wordt overschreven. Een ontbrekende bovenliggende map wordt niet aangemaakt en eindigt met exitcode 2. |
+| `--help` | overal | Toon hulp en exitcode 0. |
+| `--version` | bovenaan | Toon de versie (`dd-metric-bill 1.0.0`) en exitcode 0. Een debug-build toont ook de git-commit als git die geeft. |
+
+Alleen count accepteert --explain, --plan, --hosts, --allow-tags, --prices en --unbounded-threshold. --hosts werkt alleen samen met --plan. --untyped-as werkt alleen samen met --format prometheus. Exitcodes: 0 gelukt, 1 budget overschreden, 2 invoer- of parsefout, 3 gebruiksfout, 130 SIGINT (geen half rapport). Op een terminal, of met `--verbose`, volgt na een fout op stderr een `hint:`-regel die zegt wat je kunt doen. Een pipe, een redirect of `--quiet` houdt alleen de eerste regel. `--verbose` schrijft bij een gelukt verslag ook één `context:`-regel op stderr. `--quiet` samen met `--verbose` eindigt met exitcode 3. `--output PATH` schrijft dat verslag naar het bestand en laat stdout leeg. Gewone exitcodes blijven 0, 1, 2 en 3. SIGINT eindigt met 130 en laat geen half rapport achter.
+
+### Shell-completions
+
+`dd-metric-bill completions bash` en `dd-metric-bill completions zsh` printen een completionscript op stdout en eindigen met exit 0. Bijvoorbeeld `dd-metric-bill completions bash > ~/.local/share/bash-completion/completions/dd-metric-bill`. De andere opties worden geaccepteerd en genegeerd.
 
 ## Hoe het rekent
 
@@ -128,11 +276,13 @@ dd-metric-bill past de regels van Datadog toe. De `host`-tag telt mee, een histo
 - Geen verbinding met Datadog. Er is geen API-key en geen live usage. Volledig offline: geen netwerk, geen telemetrie.
 - De allowlist geldt voor alle metrics tegelijk. In Datadog is de allowlist per metric.
 - Zonder `--hosts` wordt het aantal hosts afgeleid uit de `host`-tag. Datadog rekent met betaalde hosts.
-- Eén regel mag één waarde van de sleutel `host` hebben. Twee verschillende waarden op die regel (`m:1|c|#host:a,host:b`, JSON `"tags":["host:a","host:b"]`, Prometheus `{host="a",host="b"}`) geven exit 2 met `host has more than one value`. De melding noemt het formaat en het regelnummer. Dezelfde waarde twee keer (`host:a,host:a`) is één host. Andere sleutels mogen herhaald worden. `HOST` is een andere sleutel.
+- Eén regel mag één waarde van de sleutel `host` hebben. Twee verschillende waarden op die regel (`m:1|c|#host:a,host:b`, JSON `"tags":["host:a","host:b"]`, Prometheus `{host="a",host="b"}`) geven exit 2 met `host has more than one value`. De melding noemt het formaat en het regelnummer. Dezelfde waarde twee keer (`host:a,host:a`) is één host. Andere sleutels mogen herhaald worden. Tags worden in kleine letters gezet, zoals Datadog ze opslaat: `HOST` is de tag `host` en `Env:Prod` is gelijk aan `env:prod`. Metrieknamen blijven hoofdlettergevoelig.
 - Alleen de "Latest Version"-mapping wordt gevolgd. De mapping komt uit B2 (Mapping Prometheus Metrics to Datadog Metrics, https://docs.datadoghq.com/integrations/guide/prometheus-metrics/, gelezen 7 oktober 2026). Het overslaan van untyped komt uit B3 (Datadog, OpenMetrics, sectie Missing untyped metrics, https://docs.datadoghq.com/integrations/openmetrics/, gelezen 7 oktober 2026): "By default, the integration skips metrics that come without a type on a Prometheus exposition." Dat is het standaardgedrag van de OpenMetrics-check van de Datadog Agent.
 - Een UTF-8 BOM aan het begin van een bestand wordt overgeslagen, in DogStatsD, JSONL en Prometheus. Dat is een keuze: de BOM hoort niet bij de metricnaam. Een BOM verderop in het bestand blijft staan.
 - Het `_created`-sample van een OpenMetrics-counter telt niet mee. Wat Datadog daarmee doet is niet geverifieerd.
-- Alleen gewone bestanden worden gelezen, als sample bij `count` en `diff` en als `--prices`. Een map, FIFO, device of ander niet-regulier pad wordt niet gelezen. Symlinks worden gevolgd. Het geopende bestand wordt gecontroleerd, zodat het lezen niet wacht als het pad een FIFO is.
+- Alleen gewone bestanden worden gelezen, als sample bij `count` en `diff` en als `--prices`, behalve een sample-pad `-`: dat leest dan standaardinvoer. Een map, FIFO, device of ander niet-regulier pad wordt niet gelezen. Symlinks worden gevolgd. Het geopende bestand wordt gecontroleerd, zodat het lezen niet wacht als het pad een FIFO is. `-` meer dan één keer in hetzelfde commando opgeven leest de hele standaardinvoer voor de eerste en niets voor de rest.
+- Elk sample en elk prijsbestand, en standaardinvoer, is hoogstens 268435456 bytes (256 MiB). Een grotere invoer eindigt met exit 2 en wordt niet ingelezen. De melding bevat `file is larger than 268435456 bytes`.
+- Geheugengebruik groeit met de grootte van het sample: het hele sample wordt vóór het tellen in het geheugen gelezen en geparsed; er is geen streamingmodus. Elke aparte naam, tagsleutel en tagwaarde wordt één keer opgeslagen en tijdens het tellen is een serie een korte lijst ids. Gemeten op één machine: een DogStatsD-sample van 900.000 unieke series (64 MB) gebruikt ongeveer 370 MB RSS en 10 seconden, ongeveer 6 keer de invoer; vóór deze wijziging was dat voor hetzelfde sample ongeveer 1,3 GB en 24 seconden. Een veel groter sample vraagt navenant meer geheugen en tijd.
 - Een Prometheus-histogram of -summary die op dezelfde naam en hetzelfde soort uitkomt als een ander sample telt één keer. Dezelfde tags zijn één combinatie. `latency_count` van een histogram `latency` en een counter `latency.count` met dezelfde labels zijn één metric.
 - Een verslag dat niet geschreven kan worden geeft exit 2 (`could not write the report: REASON`). Dat is geen succes en het geeft geen panic. `--help` en `--version` die niet geschreven kunnen worden geven exit 3. Stuurtekens in currency, source, date en in een metricnaam op een foutregel worden als `\xNN` getoond.
 - Alleen count accepteert --explain, --plan, --hosts, --allow-tags, --prices en --unbounded-threshold. Bij `diff` geven ze exit 3 (`option does not apply to diff: <option>`), vóór het lezen van samples of het prijsbestand.

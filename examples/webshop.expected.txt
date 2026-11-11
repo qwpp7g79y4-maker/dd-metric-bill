@@ -1,0 +1,22 @@
+total: 37
+
+cart.items type: gauge combinations: 3 count: 3 rule: D3
+  tag: host values: 3 added: 2
+  tag: env values: 1 added: 0
+  tag: service values: 1 added: 0
+checkout.completed type: count combinations: 4 count: 4 rule: D3
+  tag: payment values: 3 added: 2
+  tag: region values: 2 added: 1
+  tag: env values: 1 added: 0
+  tag: service values: 1 added: 0
+http.request.duration type: histogram combinations: 3 count: 15 rule: D4
+  tag: route values: 2 added: 1
+  tag: status values: 2 added: 1
+  tag: env values: 1 added: 0
+  tag: service values: 1 added: 0
+search.latency type: distribution combinations: 3 count: 15 rule: D5
+  tag: user_id values: 3 added: 2
+  tag: env values: 1 added: 0
+  tag: service values: 1 added: 0
+
+estimate: Datadog bills the hourly average over the month; this is one snapshot (source: B1)

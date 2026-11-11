@@ -133,6 +133,9 @@ fn assert_conflict(format_name: &str, body: &str, line_no: usize, also_default: 
         ]);
         calls.push(vec!["diff".to_string(), bad_path, good_path]);
     }
+    for call in &mut calls {
+        call.insert(0, "--verbose".to_string());
+    }
     for call in calls {
         let output = run(&call);
         assert_eq!(
@@ -143,6 +146,8 @@ fn assert_conflict(format_name: &str, body: &str, line_no: usize, also_default: 
         );
         assert!(output.stdout.is_empty(), "{call:?}\n{}", failure(&output));
         let stderr = String::from_utf8(output.stderr).expect("stderr is utf-8");
+        let (stderr, hint) = stderr.split_once("hint: ").expect("stderr has a hint line");
+        assert!(hint.ends_with('\n') && !hint.trim().is_empty(), "{hint:?}");
         assert_eq!(stderr, expected, "{call:?}");
         for line in body.lines().map(str::trim).filter(|line| !line.is_empty()) {
             assert!(
@@ -291,32 +296,30 @@ fn other_duplicate_keys_stay_allowed() {
     }
 }
 
-/// Keys are not lowercased, so `HOST` is not the host tag.
+/// Datadog lowercases tags, so `HOST` is the host tag.
 #[test]
-fn host_key_is_case_sensitive() {
-    let none = TempPath::text("m:1|c|#HOST:a,HOST:b\n");
+fn host_key_is_case_insensitive() {
+    let conflict = TempPath::text("m:1|c|#HOST:a,HOST:b\n");
     let output = run(&[
         "count".to_string(),
         "--plan".to_string(),
         "pro".to_string(),
-        none.path().to_string(),
+        conflict.path().to_string(),
     ]);
-    assert_eq!(output.status.code(), Some(0), "{}", failure(&output));
-    let stdout = String::from_utf8(output.stdout).expect("stdout is utf-8");
-    assert!(stdout.contains("allotment: 0\n"), "{stdout}");
+    assert_eq!(output.status.code(), Some(2), "{}", failure(&output));
 
-    let mixed = [
-        ("dogstatsd", "m:1|c|#HOST:a,host:b\n"),
+    let same = [
+        ("dogstatsd", "m:1|c|#HOST:a,host:A\n"),
         (
             "jsonl",
-            "{\"metric\":\"m\",\"type\":\"count\",\"tags\":[\"HOST:a\",\"host:b\"]}\n",
+            "{\"metric\":\"m\",\"type\":\"count\",\"tags\":[\"HOST:a\",\"host:A\"]}\n",
         ),
         (
             "prometheus",
-            "# TYPE m counter\nm{HOST=\"a\",host=\"b\"} 1\n",
+            "# TYPE m counter\nm{HOST=\"a\",host=\"A\"} 1\n",
         ),
     ];
-    for (format_name, body) in mixed {
+    for (format_name, body) in same {
         let path = TempPath::text(body);
         let output = run(&[
             "count".to_string(),

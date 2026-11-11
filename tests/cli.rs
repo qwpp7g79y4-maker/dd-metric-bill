@@ -632,3 +632,52 @@ fn json_valid(text: &str) {
         String::from_utf8_lossy(&output.stderr)
     );
 }
+
+#[test]
+fn advice_names_the_unbounded_key_and_the_saving() {
+    let mut contents = String::new();
+    for i in 1..=3 {
+        contents.push_str(&format!("m:1|c|#env:prod,user_id:u{i}\n"));
+    }
+    let path = TempSample::new(&contents);
+    let output = binary()
+        .args(["count", "--unbounded-threshold", "2", path.as_str()])
+        .output()
+        .expect("binary start");
+    assert_eq!(output.status.code(), Some(0), "{}", failure(&output));
+    let stdout = String::from_utf8(output.stdout).expect("stdout is utf-8");
+    assert!(
+        stdout.contains("  advice: drop user_id count: 3 -> 1 saves: 2\n"),
+        "{stdout}"
+    );
+    assert!(!stdout.contains("u1"), "{stdout}");
+
+    let json = binary()
+        .args([
+            "count",
+            "--json",
+            "--unbounded-threshold",
+            "2",
+            path.as_str(),
+        ])
+        .output()
+        .expect("binary start");
+    let text = String::from_utf8(json.stdout).expect("stdout is utf-8");
+    let doc: serde_json::Value = serde_json::from_str(&text).expect("valid json");
+    let advice = &doc["unbounded"][0]["advice"];
+    assert_eq!(advice["drop"], serde_json::json!(["user_id"]));
+    assert_eq!(advice["count_before"], 3);
+    assert_eq!(advice["count_after"], 1);
+    assert_eq!(advice["saved"], 2);
+}
+
+#[test]
+fn no_advice_without_unbounded_keys() {
+    let path = TempSample::new("m:1|c|#env:prod\nm:1|c|#env:dev\n");
+    let output = binary()
+        .args(["count", path.as_str()])
+        .output()
+        .expect("binary start");
+    let stdout = String::from_utf8(output.stdout).expect("stdout is utf-8");
+    assert!(!stdout.contains("advice"), "{stdout}");
+}

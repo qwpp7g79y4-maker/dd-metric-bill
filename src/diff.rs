@@ -1,3 +1,5 @@
+//! Difference between two samples, using the same counting rules as [`crate::count`].
+
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use crate::count::{count_by_metric, CountError};
@@ -9,9 +11,13 @@ use crate::tags::tag_breakdown;
 /// `delta` is the new total minus the old one. Tag values are not included.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DiffReport {
+    /// Billable total of the old sample.
     pub old_total: u64,
+    /// Billable total of the new sample.
     pub new_total: u64,
+    /// [`DiffReport::new_total`] minus [`DiffReport::old_total`].
     pub delta: i128,
+    /// One row per metric name and kind that appears in either sample.
     pub metrics: Vec<MetricDelta>,
 }
 
@@ -22,12 +28,19 @@ pub struct DiffReport {
 /// `delta` is the billable count (new minus old; absent counts as 0).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MetricDelta {
+    /// Metric name.
     pub name: String,
+    /// Billable kind.
     pub kind: Kind,
+    /// Billable count in the old sample. `None` when the metric is only in the new sample.
     pub old_count: Option<u64>,
+    /// Billable count in the new sample. `None` when the metric is only in the old sample.
     pub new_count: Option<u64>,
+    /// New count minus old count. A missing count counts as 0.
     pub delta: i128,
+    /// Rule code that set the count.
     pub rule: &'static str,
+    /// Tag keys of this metric. Tag values are not included.
     pub tags: Vec<TagDelta>,
 }
 
@@ -38,11 +51,17 @@ pub struct MetricDelta {
 /// not included, same as in the `count` breakdown.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TagDelta {
+    /// Tag key.
     pub key: String,
+    /// Distinct values of this key in the old sample.
     pub old_values: u64,
+    /// Distinct values of this key in the new sample.
     pub new_values: u64,
+    /// Series this key added in the old sample.
     pub old_added: u64,
+    /// Series this key added in the new sample.
     pub new_added: u64,
+    /// [`TagDelta::new_added`] minus [`TagDelta::old_added`].
     pub delta: i128,
 }
 

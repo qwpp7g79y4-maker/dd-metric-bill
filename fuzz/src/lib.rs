@@ -61,18 +61,18 @@ pub fn to_samples(specs: &[FuzzSample]) -> Vec<Sample> {
                 .iter()
                 .take(MAX_TAGS)
                 .map(|tag| Tag {
-                    key: tag.key.clone(),
-                    value: tag.value.clone(),
+                    key: tag.key.as_str().into(),
+                    value: tag.value.as_deref().map(Into::into),
                 })
                 .collect();
             if spec.mark_value {
                 tags.push(Tag {
-                    key: "marker".to_string(),
-                    value: Some(MARKER.to_string()),
+                    key: "marker".into(),
+                    value: Some(MARKER.into()),
                 });
             }
             Sample {
-                name: spec.name.clone(),
+                name: spec.name.as_str().into(),
                 kind: kind_of(spec.kind),
                 tags,
                 d10: spec.d10,

@@ -6,8 +6,37 @@ Deze pagina laat zien hoe elke release van dd-metric-bill is gecontroleerd, wat 
 
 | | |
 |---|---|
-| Gecontroleerde commit | [`c0a735b`](https://github.com/qwpp7g79y4-maker/dd-metric-bill/commit/c0a735b) |
-| Tests | 242 automatische tests, gedraaid in debug- en releasemodus en op Rust 1.85 (alle drie: 0 mislukt) |
+| Versie | 1.0.0, unreleased (release candidate) |
+| Gecontroleerde commit | tak `prep/w24-fout`. De testregel is opnieuw gemeten op commit `6da67b8` plus deze wijzigingen. De 100 MiB-regel en de dekkingsregel blijven de meting op `1dbd300`. |
+| Tests | 305 automatische tests, gedraaid in debugmodus met de standaardtoolchain (305 geslaagd, 0 mislukt, 0 genegeerd) |
+
+### 2026-11-08 (W-45, offline telling met uitgaande verbindingen geblokkeerd, tak prep/w24-fout)
+
+- `tests/offline.rs`: `webshop_count_is_reported_with_outgoing_connections_blocked` draait `count` op `examples/webshop.dogstatsd` in `unshare --user --map-root-user --net`. Die netwerk-namespace heeft een lege routetabel. Het rapport komt overeen met `examples/webshop.expected.txt`. Er is geen prijs en geen provider toegevoegd. Ontbreekt `unshare`, of mag de namespace niet, dan print de test `overgeslagen` en keert terug. Elke andere `unshare`-fout laat de test nog steeds falen.
+- `cargo test --no-fail-fast`: 305 geslaagd, 0 mislukt, 0 genegeerd, opnieuw gemeten op commit `6da67b8` plus deze wijzigingen.
+- `cargo fmt --check`: schoon. `cargo clippy --all-targets -- -D warnings`: schoon.
+- Versie blijft 1.0.0. `rust-version` blijft 1.85.
+
+### 2026-11-08 (W-46, invoerlimiet, tak prep/w24-fout)
+
+- Elk sample, elk prijsbestand en standaardinvoer is hoogstens 268435456 bytes (256 MiB). Een grotere invoer eindigt met exit 2 met `file is larger than 268435456 bytes` en wordt niet ingelezen. De grens is nieuw. De gemeten invoer van 100 MiB blijft eronder. Het te grote bestand maakt de test in de systeem-tijdelijke map en wordt niet gecommit. Exitcodes blijven 0, 1, 2 en 3. Er is geen prijs en geen provider toegevoegd.
+- `cargo test --no-fail-fast`: 305 geslaagd, 0 mislukt, 0 genegeerd, opnieuw gemeten op commit `6da67b8` plus deze wijzigingen.
+- `cargo fmt --check`: schoon. `cargo clippy --all-targets -- -D warnings`: schoon.
+- Versie blijft 1.0.0. `rust-version` blijft 1.85.
+
+### 2026-11-08 (W-48, SIGINT, tak prep/w24-fout)
+
+- SIGINT eindigt met exit 130. Stderr is `interrupted by SIGINT`. Er blijft geen half rapport achter. `tests/sigint.rs` stuurt het signaal via een pidfd van het kind dat de test zelf startte. Gewone exitcodes blijven 0, 1, 2 en 3. Er is geen prijs en geen provider toegevoegd. De invoerlimiet blijft 268435456 bytes.
+- `cargo test --no-fail-fast`: 305 geslaagd, 0 mislukt, 0 genegeerd, opnieuw gemeten op commit `6da67b8` plus deze wijzigingen.
+- `cargo fmt --check`: schoon. `cargo clippy --all-targets -- -D warnings`: schoon.
+- Versie blijft 1.0.0. `rust-version` blijft 1.85.
+
+### 2026-11-08 (W-66, versieregel, tak prep/w24-fout)
+
+- `--version` en `-V` tonen de crate-versie en eindigen met exit 0. Een debug-build toont ook de git-commit als git die geeft. Een release-build toont alleen de crate-versie. Er wordt geen commit-hash verzonnen. Exitcodes blijven 0, 1, 2 en 3. Er is geen prijs en geen provider toegevoegd. De invoerlimiet blijft 268435456 bytes. SIGINT blijft exit 130.
+- `cargo test --no-fail-fast`: 305 geslaagd, 0 mislukt, 0 genegeerd, opnieuw gemeten op commit `6da67b8` plus deze wijzigingen.
+- `cargo fmt --check`: schoon. `cargo clippy --all-targets -- -D warnings`: schoon.
+- Versie blijft 1.0.0. `rust-version` blijft 1.85.
 
 ### Wat is toegevoegd
 
@@ -31,9 +60,9 @@ Deze pagina laat zien hoe elke release van dd-metric-bill is gecontroleerd, wat 
 
 ### Hoe we controleerden
 
-- `cargo test`, `cargo test --release`, en `cargo +1.85 test`: 242 geslaagd, 0 mislukt, bij elke run, exit 0.
-- `cargo clippy --all-targets -- -D warnings`: exit 0. `cargo fmt --check`, in de hoofdcrate en in `fuzz/`: exit 0.
-- `cargo +nightly fuzz build`: exit 0.
+- `cargo test --no-fail-fast`: 305 geslaagd, 0 mislukt, 0 genegeerd, exit 0, opnieuw gemeten op commit `6da67b8` plus deze wijzigingen. Releasemodus en Rust 1.85 zijn voor deze commit niet gedraaid.
+- `cargo clippy --all-targets -- -D warnings`: exit 0. `cargo fmt --check`: exit 0 (de crate `fuzz/` is niet gecontroleerd).
+- `cargo +nightly fuzz build`: exit 0 op een eerdere commit (`09d370a`); niet opnieuw gedraaid voor deze commit.
 - Elk van de 7 fuzz-targets draaide 660 seconden op één vastgezette CPU-kern, achter elkaar (in totaal ongeveer 77 minuten):
 
   | Target | Seconden | Uitvoeringen | Crashes |

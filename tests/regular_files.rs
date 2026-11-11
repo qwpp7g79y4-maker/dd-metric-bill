@@ -123,6 +123,40 @@ fn output_within(args: &[&str], limit: Duration) -> Output {
     }
 }
 
+/// One byte over 268435456 (256 MiB) is exit 2. The file is sparse, lives in
+/// the system temp directory, and is removed when the test ends. It is not a
+/// repository file.
+#[test]
+fn sample_over_the_byte_limit_exits_2() {
+    const LIMIT: u64 = 268435456;
+    struct Gone(std::path::PathBuf);
+    impl Drop for Gone {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_file(&self.0);
+        }
+    }
+    let path = Gone(std::env::temp_dir().join(format!(
+        "dd-metric-bill-w46-over-limit-{}.dogstatsd",
+        std::process::id()
+    )));
+    let file =
+        std::fs::File::create(&path.0).expect("create over-limit file in the temp directory");
+    file.set_len(LIMIT + 1)
+        .expect("sparse length one byte over the limit");
+    drop(file);
+    let shown = path.0.to_str().expect("path is utf-8");
+    let output = output_within(&["count", shown], Duration::from_secs(2));
+    assert_eq!(output.status.code(), Some(2), "{}", failure(&output));
+    assert!(output.stdout.is_empty(), "{}", failure(&output));
+    let stderr = String::from_utf8(output.stderr).expect("stderr is utf-8");
+    assert!(
+        stderr.contains(&format!("file is larger than {LIMIT} bytes")),
+        "{stderr}"
+    );
+    assert!(stderr.contains("cannot read sample"), "{stderr}");
+    assert!(!stderr.contains("panicked"), "{stderr}");
+}
+
 fn expected_rejection(path: &str, args: &[&str], kind: &str) {
     let output = output_within(args, DEADLINE);
     assert_eq!(output.status.code(), Some(2), "{}", failure(&output));
@@ -159,7 +193,7 @@ fn dev_zero_is_not_a_regular_file() {
 }
 
 #[test]
-#[cfg(unix)]
+#[cfg(all(unix, not(coverage)))]
 fn fifo_without_writer_is_not_a_regular_file() {
     let tmp = TempDir::new();
     let fifo = tmp.join("pipe");
@@ -175,7 +209,7 @@ fn fifo_without_writer_is_not_a_regular_file() {
 /// A symlink to a FIFO is the FIFO. The check follows the link and exits 2
 /// without waiting for a writer.
 #[test]
-#[cfg(unix)]
+#[cfg(all(unix, not(coverage)))]
 fn symlink_to_fifo_is_not_a_regular_file() {
     let tmp = TempDir::new();
     let fifo = tmp.join("pipe");
@@ -308,7 +342,7 @@ fn file_name_that_is_not_utf8_works() {
 /// The path is a regular file at the check and a symlink to a FIFO at the open.
 /// The process must exit 2 within 2 seconds, not block in `open`.
 #[test]
-#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+#[cfg(all(target_os = "linux", target_arch = "x86_64", not(coverage)))]
 fn symlink_becomes_fifo_between_check_and_read() {
     let tmp = TempDir::new();
     let real = tmp.write_file("real.dogstatsd", "a:1|c\n");

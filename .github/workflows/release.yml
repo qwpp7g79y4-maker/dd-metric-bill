@@ -82,12 +82,15 @@ jobs:
           cp README.md README.nl.md LICENSE-MIT LICENSE-APACHE THIRD-PARTY-LICENSES.html CHANGELOG.md SECURITY.md QUALITY.md QUALITY.nl.md "dist/$name/"
           cp -R docs "dist/$name/"
           cp -R prices "dist/$name/"
+          cp -R examples "dist/$name/"
           mkdir -p "dist/$name/tests/fixtures"
           cp tests/fixtures/b1-count.dogstatsd \
             tests/fixtures/b1-histogram.dogstatsd \
             tests/fixtures/diff-old.dogstatsd \
             tests/fixtures/diff-new.dogstatsd \
             tests/fixtures/empty.dogstatsd \
+            tests/fixtures/quickstart-prices.json \
+            tests/fixtures/quickstart.dogstatsd \
             "dist/$name/tests/fixtures/"
           cd dist
           if [ "${{ runner.os }}" = "Windows" ]; then
@@ -124,11 +127,14 @@ jobs:
           test -f "$name/tests/fixtures/diff-old.dogstatsd"
           test -f "$name/tests/fixtures/diff-new.dogstatsd"
           test -f "$name/tests/fixtures/empty.dogstatsd"
+          test -f "$name/tests/fixtures/quickstart-prices.json"
+          test -f "$name/tests/fixtures/quickstart.dogstatsd"
           test -f "$name/SECURITY.md"
           test -f "$name/QUALITY.md"
           test -f "$name/QUALITY.nl.md"
           test -f "$name/THIRD-PARTY-LICENSES.html"
           test -f "$name/prices/datadog-example.json"
+          test -f "$name/examples/README.md"
           if [ "${{ runner.os }}" = "Windows" ]; then
             total=$(cd "$name" && ./dd-metric-bill.exe count tests/fixtures/b1-count.dogstatsd | head -n 1 | tr -d '\r')
           else

@@ -1,13 +1,11 @@
-use std::collections::{BTreeMap, BTreeSet};
+//! Billable custom-metric counts (D1-D5) and the host allotment (D7).
+
+use std::borrow::Cow;
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::fmt::{self, Write};
 
-use crate::parse::{Kind, Sample};
-
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
-struct TagPair {
-    key: String,
-    value: Option<String>,
-}
+use crate::parse::{Kind, Sample, Tag};
+use crate::series::{combo_of, lowered, Combo, Interner};
 
 /// Default `histogram_aggregates`: `max`, `median`, `avg`, `count` (D4).
 pub const DEFAULT_HISTOGRAM_AGGREGATES: u64 = 4;
@@ -24,17 +22,28 @@ pub enum CountError {
     /// Hosts times the metrics per host does not fit in `u64`.
     Allotment,
     /// `--histogram-aggregates` plus `--histogram-percentiles` does not fit in `u64`.
-    Sum { aggregates: u64, percentiles: u64 },
+    Sum {
+        /// Value of `--histogram-aggregates`.
+        aggregates: u64,
+        /// Value of `--histogram-percentiles`.
+        percentiles: u64,
+    },
     /// The factor times the number of combinations does not fit in `u64`.
     Product {
+        /// Metric whose product overflowed.
         metric: String,
+        /// Histogram or distribution factor.
         factor: u64,
+        /// Unique tag combinations of that metric.
         combinations: u64,
     },
     /// The sum of the metric counts does not fit in `u64`.
     Total {
+        /// Metric that was being added when the total overflowed.
         metric: String,
+        /// Histogram or distribution factor of that metric.
         factor: u64,
+        /// Unique tag combinations of that metric.
         combinations: u64,
     },
 }
@@ -130,25 +139,35 @@ const D5_TEXT: &str = "DISTRIBUTION: 5 per unique tag combination (`count`, `sum
 /// Rule that sets the count for one metric, with a source URL (B1 or B2).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Rule {
+    /// Short rule code, such as `D3`.
     pub code: &'static str,
+    /// Rule text. The configured factor is appended for D4 and D5.
     pub text: String,
+    /// Source URL for the rule (B1 or B2).
     pub source: &'static str,
 }
 
 /// Billable count of one metric name and kind.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MetricCount {
+    /// Metric name.
     pub name: String,
+    /// Billable kind.
     pub kind: Kind,
+    /// Unique tag combinations.
     pub combinations: u64,
+    /// Billable count after the rule's factor.
     pub count: u64,
+    /// Rule that set [`MetricCount::count`].
     pub rule: Rule,
 }
 
 /// Count over a sample: per metric and the total.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CountReport {
+    /// One row per metric name and kind.
     pub metrics: Vec<MetricCount>,
+    /// Sum of [`MetricCount::count`].
     pub total: u64,
 }
 
@@ -161,14 +180,18 @@ pub const ENTERPRISE_PER_HOST: u64 = 200;
 /// Plan for the allotment (D7).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Plan {
+    /// Pro: [`PRO_PER_HOST`] custom metrics per host.
     Pro,
+    /// Enterprise: [`ENTERPRISE_PER_HOST`] custom metrics per host.
     Enterprise,
 }
 
 /// One volume against the allotment (D7). `surplus` is 0 below the allotment.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct AgainstAllotment {
+    /// Indexed or ingested usage.
     pub usage: u64,
+    /// Usage above the allotment, or 0 when usage is lower.
     pub surplus: u64,
 }
 
@@ -178,16 +201,21 @@ pub struct AgainstAllotment {
 /// is absent. With an allowlist, indexed and ingested are each listed separately.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Allotment {
+    /// Pro or Enterprise.
     pub plan: Plan,
+    /// Hosts the allotment was multiplied by.
     pub hosts: u64,
+    /// Metrics per host times [`Allotment::hosts`].
     pub allotment: u64,
+    /// Indexed usage against the allotment.
     pub indexed: AgainstAllotment,
+    /// Ingested usage against the allotment. Absent without an allowlist.
     pub ingested: Option<AgainstAllotment>,
 }
 
 struct Group {
     kind: Kind,
-    combinations: BTreeSet<BTreeSet<TagPair>>,
+    combinations: HashSet<Combo>,
     /// True only when every sample in the group is a Prometheus histogram or summary.
     all_d10: bool,
     /// True only when every sample in the group is an OpenMetrics counter `_total`.
@@ -274,19 +302,39 @@ pub fn count_by_metric(
     histogram_percentiles: u64,
     percentiles: bool,
 ) -> Result<CountReport, CountError> {
+    count_tags_where(
+        samples,
+        |_| true,
+        histogram_aggregates,
+        histogram_percentiles,
+        percentiles,
+    )
+}
+
+/// [`count_by_metric`] over only the tags that pass `keep`.
+pub(crate) fn count_tags_where(
+    samples: &[Sample],
+    keep: impl Fn(&Tag) -> bool,
+    histogram_aggregates: u64,
+    histogram_percentiles: u64,
+    percentiles: bool,
+) -> Result<CountReport, CountError> {
+    let mut interner = Interner::default();
     let mut groups: BTreeMap<(String, u8), Group> = BTreeMap::new();
     for sample in samples {
-        let key = (sample.name.clone(), kind_ord(sample.kind));
+        let key = (sample.name.to_string(), kind_ord(sample.kind));
         let group = groups.entry(key).or_insert_with(|| Group {
             kind: sample.kind,
-            combinations: BTreeSet::new(),
+            combinations: HashSet::new(),
             all_d10: true,
             all_counter_total: true,
         });
         // A mixed group is no longer a pure D10 or D12 series. The factor stays 1.
         group.all_d10 &= sample.d10;
         group.all_counter_total &= sample.counter_total;
-        group.combinations.insert(tags_of(sample));
+        group
+            .combinations
+            .insert(combo_of(&mut interner, sample, &keep));
     }
 
     let mut metrics = Vec::with_capacity(groups.len());
@@ -355,14 +403,14 @@ fn against(usage: u64, allotted: u64) -> AgainstAllotment {
     }
 }
 
-/// Unique values of the `host` tag. A tag without a value does not count (D7).
+/// Unique values of the `host` tag, compared in lowercase like a parsed tag. A tag without a value does not count (D7).
 #[must_use]
 pub fn unique_hosts(samples: &[Sample]) -> u64 {
-    let hosts: BTreeSet<&str> = samples
+    let hosts: BTreeSet<Cow<str>> = samples
         .iter()
         .flat_map(|sample| &sample.tags)
-        .filter(|tag| tag.key == "host")
-        .filter_map(|tag| tag.value.as_deref())
+        .filter(|tag| lowered(&tag.key) == "host")
+        .filter_map(|tag| tag.value.as_deref().map(lowered))
         .collect();
     u64::try_from(hosts.len()).expect("number of hosts fits in u64")
 }
@@ -390,17 +438,6 @@ fn kind_ord(kind: Kind) -> u8 {
         Kind::Distribution => 3,
         Kind::Untyped => 4,
     }
-}
-
-fn tags_of(sample: &Sample) -> BTreeSet<TagPair> {
-    sample
-        .tags
-        .iter()
-        .map(|tag| TagPair {
-            key: tag.key.clone(),
-            value: tag.value.clone(),
-        })
-        .collect()
 }
 
 fn factor_and_rule(

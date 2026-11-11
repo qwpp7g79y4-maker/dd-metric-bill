@@ -1,3 +1,5 @@
+//! Text and JSON for `count` and `diff`.
+
 use std::collections::HashMap;
 use std::fmt::Write;
 use std::path::Path;
@@ -9,7 +11,7 @@ use crate::cost::CostReport;
 use crate::count::{Allotment, CountReport, MetricCount, Plan, CUSTOM_METRICS_SOURCE};
 use crate::diff::{DiffReport, MetricDelta, TagDelta};
 use crate::parse::Kind;
-use crate::tags::{MetricTags, MetricUnbounded, TagKey, UnboundedReason, UnboundedTag};
+use crate::tags::{DropAdvice, MetricTags, MetricUnbounded, TagKey, UnboundedReason, UnboundedTag};
 
 const TOOL: &str = "dd-metric-bill";
 
@@ -63,6 +65,7 @@ pub fn render_count(
                 explain,
                 index.keys(&metric.name, metric.kind),
                 index.unbounded(&metric.name, metric.kind),
+                index.advice(&metric.name, metric.kind),
                 index.allow(&metric.name, metric.kind),
             );
         }
@@ -294,7 +297,7 @@ fn unbounded_json(unbounded: &[MetricUnbounded]) -> Value {
 }
 
 fn metric_unbounded_json(metric: &MetricUnbounded) -> Value {
-    json!({
+    let mut value = json!({
         "name": metric.name,
         "type": kind_label(metric.kind),
         "keys": metric
@@ -305,7 +308,16 @@ fn metric_unbounded_json(metric: &MetricUnbounded) -> Value {
                 "reasons": tag.reasons.iter().copied().map(reason_label).collect::<Vec<_>>(),
             }))
             .collect::<Vec<_>>(),
-    })
+    });
+    if let Some(advice) = metric.advice {
+        value["advice"] = json!({
+            "drop": metric.keys.iter().map(|tag| tag.key.as_str()).collect::<Vec<_>>(),
+            "count_before": advice.before,
+            "count_after": advice.after,
+            "saved": advice.saved(),
+        });
+    }
+    value
 }
 
 fn allotment_json(allotment: &Allotment) -> Value {
@@ -465,6 +477,7 @@ fn write_metric(
     explain: bool,
     keys: &[TagKey],
     unbounded: &[UnboundedTag],
+    advice: Option<DropAdvice>,
     allow: Option<&MetricAllow>,
 ) {
     writeln!(
@@ -516,12 +529,29 @@ fn write_metric(
         )
         .expect("writing to a String does not fail");
     }
+    if let Some(advice) = advice {
+        let keys: Vec<String> = unbounded
+            .iter()
+            .filter(|tag| !tag.reasons.is_empty())
+            .map(|tag| visible(&tag.key).to_string())
+            .collect();
+        writeln!(
+            out,
+            "  advice: drop {keys} count: {before} -> {after} saves: {saved}",
+            keys = keys.join(", "),
+            before = advice.before,
+            after = advice.after,
+            saved = advice.saved(),
+        )
+        .expect("writing to a String does not fail");
+    }
 }
 
 /// First match for each metric name and kind. Output order stays the report order.
 struct Index<'a> {
     tags: HashMap<(&'a str, u8), &'a [TagKey]>,
     unbounded: HashMap<(&'a str, u8), &'a [UnboundedTag]>,
+    advice: HashMap<(&'a str, u8), DropAdvice>,
     allow: HashMap<(&'a str, u8), &'a MetricAllow>,
 }
 
@@ -546,6 +576,14 @@ impl<'a> Index<'a> {
                 .entry((item.name.as_str(), kind_ord(item.kind)))
                 .or_insert(item.keys.as_slice());
         }
+        let mut advice_map = HashMap::new();
+        for item in unbounded {
+            if let Some(advice) = item.advice {
+                advice_map
+                    .entry((item.name.as_str(), kind_ord(item.kind)))
+                    .or_insert(advice);
+            }
+        }
         let allow_metrics = allow.map(|report| report.metrics.as_slice()).unwrap_or(&[]);
         let mut allow_map = HashMap::with_capacity(allow_metrics.len());
         for item in allow_metrics {
@@ -556,6 +594,7 @@ impl<'a> Index<'a> {
         Self {
             tags: tags_map,
             unbounded: unbounded_map,
+            advice: advice_map,
             allow: allow_map,
         }
     }
@@ -572,6 +611,10 @@ impl<'a> Index<'a> {
             .get(&(name, kind_ord(kind)))
             .copied()
             .unwrap_or(NO_UNBOUNDED)
+    }
+
+    fn advice(&self, name: &str, kind: Kind) -> Option<DropAdvice> {
+        self.advice.get(&(name, kind_ord(kind))).copied()
     }
 
     fn allow(&self, name: &str, kind: Kind) -> Option<&'a MetricAllow> {
@@ -619,7 +662,9 @@ mod tests {
     use crate::count::{allotment, CountReport, MetricCount, Plan, Rule, CUSTOM_METRICS_SOURCE};
     use crate::diff::{DiffReport, MetricDelta, TagDelta};
     use crate::parse::Kind;
-    use crate::tags::{MetricTags, MetricUnbounded, TagKey, UnboundedReason, UnboundedTag};
+    use crate::tags::{
+        DropAdvice, MetricTags, MetricUnbounded, TagKey, UnboundedReason, UnboundedTag,
+    };
     use serde_json::Value;
 
     fn metric(
@@ -872,6 +917,7 @@ estimate: Datadog bills the hourly average over the month; this is one snapshot 
                 key: "user_id".to_string(),
                 reasons: vec![UnboundedReason::Threshold, UnboundedReason::NumericId],
             }],
+            advice: None,
         }];
         let text = render_count(&report, false, None, &[], &unbounded, None, None);
         assert_eq!(
@@ -886,6 +932,49 @@ estimate: Datadog bills the hourly average over the month; this is one snapshot 
 "
         );
         assert!(!text.contains("123456"));
+    }
+
+    #[test]
+    fn advice_line_and_json_show_the_saving() {
+        let report = CountReport {
+            total: 3,
+            metrics: vec![metric(
+                "checkout",
+                Kind::Count,
+                3,
+                3,
+                "D3",
+                "COUNT, RATE and GAUGE: 1 metric per unique tag combination (B1, tabs Count/Rate and Gauge).",
+            )],
+        };
+        let unbounded = vec![MetricUnbounded {
+            name: "checkout".to_string(),
+            kind: Kind::Count,
+            keys: vec![UnboundedTag {
+                key: "user_id".to_string(),
+                reasons: vec![UnboundedReason::Threshold],
+            }],
+            advice: Some(DropAdvice {
+                before: 3,
+                after: 1,
+            }),
+        }];
+        let text = render_count(&report, false, None, &[], &unbounded, None, None);
+        assert!(text.contains(
+            "  unbounded: user_id reason: threshold\n  advice: drop user_id count: 3 -> 1 saves: 2\n"
+        ));
+        let json = render_count_json(
+            &[Path::new("s.dogstatsd")],
+            &report,
+            None,
+            &[],
+            &unbounded,
+            None,
+            None,
+        );
+        let doc: serde_json::Value = serde_json::from_str(&json).expect("valid json");
+        assert_eq!(doc["unbounded"][0]["advice"]["saved"], 2);
+        assert_eq!(doc["unbounded"][0]["advice"]["drop"][0], "user_id");
     }
 
     #[test]
@@ -1131,6 +1220,7 @@ estimate: Datadog bills the hourly average over the month; this is one snapshot 
                 key: "user_id".to_string(),
                 reasons: vec![UnboundedReason::Threshold, UnboundedReason::NumericId],
             }],
+            advice: None,
         }];
         let text = render_count_json(
             &[Path::new("sample.dogstatsd")],
