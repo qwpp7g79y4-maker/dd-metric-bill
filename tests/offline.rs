@@ -3,6 +3,8 @@
 //! W-45. `unshare --user --map-root-user --net` starts a network namespace
 //! whose route table is empty, so nothing can connect out.
 
+#![cfg(target_os = "linux")]
+
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
@@ -12,7 +14,6 @@ fn root() -> PathBuf {
 }
 
 /// A runner that may not create a user or network namespace.
-#[cfg(target_os = "linux")]
 fn netns_denied(stderr: &str) -> bool {
     let low = stderr.to_ascii_lowercase();
     low.contains("operation not permitted")
@@ -28,7 +29,6 @@ fn netns_denied(stderr: &str) -> bool {
 /// No price file is passed. When `unshare` is missing, or the namespace is
 /// not permitted, the test prints `overgeslagen` and returns. Any other
 /// `unshare` failure still fails.
-#[cfg(target_os = "linux")]
 #[test]
 fn webshop_count_is_reported_with_outgoing_connections_blocked() {
     let ns = ["--user", "--map-root-user", "--net", "--"];
