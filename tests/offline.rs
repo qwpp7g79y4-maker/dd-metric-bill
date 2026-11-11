@@ -11,25 +11,46 @@ fn root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
 
+/// A runner that may not create a user or network namespace.
+#[cfg(target_os = "linux")]
+fn netns_denied(stderr: &str) -> bool {
+    let low = stderr.to_ascii_lowercase();
+    low.contains("operation not permitted")
+        || low.contains("eperm")
+        || low.contains("uid_map")
+        || low.contains("permission denied")
+}
+
 /// The webshop count, with outgoing connections blocked.
 ///
 /// The proof reads `/proc/net/route` in that namespace. `count` then reads
 /// `examples/webshop.dogstatsd` and must print `examples/webshop.expected.txt`.
-/// No price file is passed.
+/// No price file is passed. When `unshare` is missing, or the namespace is
+/// not permitted, the test prints `overgeslagen` and returns. Any other
+/// `unshare` failure still fails.
 #[cfg(target_os = "linux")]
 #[test]
 fn webshop_count_is_reported_with_outgoing_connections_blocked() {
     let ns = ["--user", "--map-root-user", "--net", "--"];
-    let proof = Command::new("unshare")
+    let proof = match Command::new("unshare")
         .args(ns)
         .args(["cat", "/proc/net/route"])
         .output()
-        .expect("unshare route table");
-    assert!(
-        proof.status.success(),
-        "unshare failed: {}",
-        String::from_utf8_lossy(&proof.stderr)
-    );
+    {
+        Ok(out) => out,
+        Err(err) => {
+            eprintln!("overgeslagen: geen unshare ({err})");
+            return;
+        }
+    };
+    if !proof.status.success() {
+        let err = String::from_utf8_lossy(&proof.stderr);
+        if netns_denied(&err) {
+            eprintln!("overgeslagen: geen netns");
+            return;
+        }
+        panic!("unshare failed: {err}");
+    }
     let routes = String::from_utf8(proof.stdout).expect("utf-8 route table");
     assert!(
         !routes.split_whitespace().any(|field| field == "00000000"),

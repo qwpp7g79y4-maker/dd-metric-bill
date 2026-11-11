@@ -18,14 +18,14 @@ Datadog bills custom metrics per unique combination of metric name and tag value
 
 ## Installation
 
-Version 1.0.0 is release-ready and is not published yet. `cargo install dd-metric-bill` from [crates.io](https://crates.io/crates/dd-metric-bill) still installs 0.1.2. Version 1.0.0 comes from the source: `cargo install --locked --path .`.
-
-With Rust 1.85 or newer, the crate on [crates.io](https://crates.io/crates/dd-metric-bill) is still 0.1.2:
+Version 1.0.0 is on [crates.io](https://crates.io/crates/dd-metric-bill). With Rust 1.85 or newer:
 
 ```sh
-cargo install --locked dd-metric-bill
+cargo install dd-metric-bill
 dd-metric-bill --help
 ```
+
+`cargo install --locked dd-metric-bill` pins the crate's lockfile.
 
 Ready-made binaries for Linux (x86_64, glibc and musl), Windows (x86_64) and macOS (Intel and Apple Silicon), each with a SHA-256 checksum, are on the [Releases page](https://github.com/qwpp7g79y4-maker/dd-metric-bill/releases). Unpack the archive and put `dd-metric-bill` on your `PATH`.
 

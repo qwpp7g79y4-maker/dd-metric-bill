@@ -12,14 +12,14 @@ Deze pagina laat zien hoe elke release van dd-metric-bill is gecontroleerd, wat 
 
 ### 2026-11-08 (W-45, offline telling met uitgaande verbindingen geblokkeerd, tak prep/w24-fout)
 
-- `tests/offline.rs`: `webshop_count_is_reported_with_outgoing_connections_blocked` draait `count` op `examples/webshop.dogstatsd` in `unshare --user --map-root-user --net`. Die netwerk-namespace heeft een lege routetabel. Het rapport komt overeen met `examples/webshop.expected.txt`. Er is geen prijs en geen provider toegevoegd.
+- `tests/offline.rs`: `webshop_count_is_reported_with_outgoing_connections_blocked` draait `count` op `examples/webshop.dogstatsd` in `unshare --user --map-root-user --net`. Die netwerk-namespace heeft een lege routetabel. Het rapport komt overeen met `examples/webshop.expected.txt`. Er is geen prijs en geen provider toegevoegd. Ontbreekt `unshare`, of mag de namespace niet, dan print de test `overgeslagen` en keert terug. Elke andere `unshare`-fout laat de test nog steeds falen.
 - `cargo test --no-fail-fast`: 305 geslaagd, 0 mislukt, 0 genegeerd, opnieuw gemeten op commit `6da67b8` plus deze wijzigingen.
 - `cargo fmt --check`: schoon. `cargo clippy --all-targets -- -D warnings`: schoon.
 - Versie blijft 1.0.0. `rust-version` blijft 1.85.
 
 ### 2026-11-08 (W-46, invoerlimiet, tak prep/w24-fout)
 
-- Elk sample, elk prijsbestand en standaardinvoer is hoogstens 268435456 bytes (256 MiB). Een grotere invoer eindigt met exit 2 met `file is larger than 268435456 bytes` en wordt niet ingelezen. De grens is nieuw. De gemeten invoer van 100 MiB blijft eronder. Het te grote bestand maakt de test in `/tmp` en wordt niet gecommit. Exitcodes blijven 0, 1, 2 en 3. Er is geen prijs en geen provider toegevoegd.
+- Elk sample, elk prijsbestand en standaardinvoer is hoogstens 268435456 bytes (256 MiB). Een grotere invoer eindigt met exit 2 met `file is larger than 268435456 bytes` en wordt niet ingelezen. De grens is nieuw. De gemeten invoer van 100 MiB blijft eronder. Het te grote bestand maakt de test in de systeem-tijdelijke map en wordt niet gecommit. Exitcodes blijven 0, 1, 2 en 3. Er is geen prijs en geen provider toegevoegd.
 - `cargo test --no-fail-fast`: 305 geslaagd, 0 mislukt, 0 genegeerd, opnieuw gemeten op commit `6da67b8` plus deze wijzigingen.
 - `cargo fmt --check`: schoon. `cargo clippy --all-targets -- -D warnings`: schoon.
 - Versie blijft 1.0.0. `rust-version` blijft 1.85.
