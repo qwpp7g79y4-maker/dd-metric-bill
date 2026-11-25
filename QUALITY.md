@@ -7,37 +7,18 @@ This page shows how each release of dd-metric-bill was checked, what we found, a
 | | |
 |---|---|
 | Version | 1.0.0, unreleased (release candidate) |
-| Commit checked | branch `prep/w24-fout`. The test row was remeasured on commit `6da67b8` plus these changes. The 100 MiB row and the coverage row stay the measurement on `1dbd300`. |
-| Tests | 305 automated tests, run in debug mode with the default toolchain (305 passed, 0 failed, 0 ignored) |
-| Line coverage | `cargo llvm-cov --no-fail-fast`, measured 2026-11-08: 97.04% of lines (144 of 4871 missed); goal above 90% met, no tests added for it |
+| Commit checked | `50c5c84`. Later commits change documentation only. |
+| Date | 2026-11-25 |
+| Tests, debug | `cargo test --locked`: FAILED, exit 101. It stops at the first failing test binary. With `--no-fail-fast`: 309 passed, 1 failed, 0 ignored |
+| Tests, release | `cargo test --release --locked`: FAILED, exit 101. With `--no-fail-fast`: 309 passed, 1 failed, 0 ignored |
+| Failing test | `release_archive_ships_linked_paths` in `tests/readme.rs`: `release.yml does not ship CONTRIBUTING.md`. Not fixed in this entry |
+| Line coverage | not run |
+| `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` | not run |
+| Fuzz targets, Rust 1.85, other platforms | not run |
+| CI on this commit | not run |
 
-### 2026-11-08 (W-45, offline count with outgoing connections blocked, branch prep/w24-fout)
+The counts come from the toolchain installed on 2026-11-25 (cargo 1.99.0, rustc 1.99.0), on Linux. The 100 MiB measurement below is older and was not repeated.
 
-- `tests/offline.rs`: `webshop_count_is_reported_with_outgoing_connections_blocked` runs `count` on `examples/webshop.dogstatsd` inside `unshare --user --map-root-user --net`. That namespace has an empty route table. The report matches `examples/webshop.expected.txt`. No price and no provider were added. When `unshare` is missing, or the namespace is not permitted, the test prints `overgeslagen` and returns. Any other `unshare` failure still fails the test.
-- `cargo test --no-fail-fast`: 305 passed, 0 failed, 0 ignored, remeasured on commit `6da67b8` plus these changes.
-- `cargo fmt --check`: clean. `cargo clippy --all-targets -- -D warnings`: clean.
-- Version stays 1.0.0. `rust-version` stays 1.85.
-
-### 2026-11-08 (W-46, input limit, branch prep/w24-fout)
-
-- Each sample, each price file, and standard input may be at most 268435456 bytes (256 MiB). A larger input exits 2 with `file is larger than 268435456 bytes` and is not loaded. The limit is new. The measured 100 MiB input stays under it. The over-limit file is created in the system temp directory by the test and is not committed. Exit codes stay 0, 1, 2 and 3. No price and no provider were added.
-- `cargo test --no-fail-fast`: 305 passed, 0 failed, 0 ignored, remeasured on commit `6da67b8` plus these changes.
-- `cargo fmt --check`: clean. `cargo clippy --all-targets -- -D warnings`: clean.
-- Version stays 1.0.0. `rust-version` stays 1.85.
-
-### 2026-11-08 (W-48, SIGINT, branch prep/w24-fout)
-
-- SIGINT exits 130. Stderr is `interrupted by SIGINT`. The report is not left half-written. `tests/sigint.rs` sends the signal through a pidfd of the child it spawned. Ordinary exit codes stay 0, 1, 2 and 3. No price and no provider were added. The input limit stays 268435456 bytes.
-- `cargo test --no-fail-fast`: 305 passed, 0 failed, 0 ignored, remeasured on commit `6da67b8` plus these changes.
-- `cargo fmt --check`: clean. `cargo clippy --all-targets -- -D warnings`: clean.
-- Version stays 1.0.0. `rust-version` stays 1.85.
-
-### 2026-11-08 (W-66, version line, branch prep/w24-fout)
-
-- `--version` and `-V` print the crate version and exit 0. A debug build also prints the git commit when git provides one. A release build prints the crate version only. No commit hash is invented. Exit codes stay 0, 1, 2 and 3. No price and no provider were added. The input limit stays 268435456 bytes. SIGINT stays exit 130.
-- `cargo test --no-fail-fast`: 305 passed, 0 failed, 0 ignored, remeasured on commit `6da67b8` plus these changes.
-- `cargo fmt --check`: clean. `cargo clippy --all-targets -- -D warnings`: clean.
-- Version stays 1.0.0. `rust-version` stays 1.85.
 
 ### Measured on 100 MiB of input
 
@@ -71,8 +52,8 @@ Peak memory in the first run: 105112 KB. This is one machine and one input shape
 
 ### How we checked
 
-- `cargo test --no-fail-fast`: 305 passed, 0 failed, 0 ignored, exit 0, remeasured on commit `6da67b8` plus these changes. Release mode and Rust 1.85 were not run for this commit.
-- `cargo clippy --all-targets -- -D warnings`: exit 0. `cargo fmt --check`: exit 0 (the `fuzz/` crate was not checked).
+- `cargo test --locked` and `cargo test --release --locked` on `50c5c84`: see the table at the top. Rust 1.85 was not run.
+- `cargo clippy --all-targets -- -D warnings` and `cargo fmt --check`: not run on `50c5c84` (not run).
 - `cargo +nightly fuzz build`: exit 0 on an earlier commit (`09d370a`); not re-run for this commit.
 - Each of the 7 fuzz targets ran 660 seconds on one pinned CPU core, sequentially (about 77 minutes in total):
 
@@ -86,7 +67,7 @@ Peak memory in the first run: 105112 KB. This is one machine and one input shape
   | `parse_prices` | 661 | 15,151,042 | 0 |
   | `parse_prometheus` | 662 | 4,939,565 | 0 |
 
-- CI on this commit: [run 38991624843](https://github.com/qwpp7g79y4-maker/dd-metric-bill/actions/runs/38991624843), completed, success.
+- CI on `50c5c84`: not run. The fuzz runs above were measured on earlier commits.
 
 ### Real bugs found
 
