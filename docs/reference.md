@@ -28,7 +28,7 @@ Run `dd-metric-bill --help` or `dd-metric-bill count --help` for the built-in he
 | `--untyped-as` | count and diff, only with `--format prometheus` | Count a Prometheus metric that has no type as `gauge` or `count`. |
 | `--quiet` | count and diff | Hide the hint line, even on a terminal. No context line. |
 | `--verbose` | count and diff | Print the hint line even on a pipe, and on success one `context:` line on stderr. |
-| `--output` | count and diff | Write the report to this file instead of stdout. An existing file is replaced. A missing parent directory is not created and exits 2. |
+| `--output` | count and diff | Write the report to this file instead of stdout. An existing regular file is replaced; a directory, FIFO, socket or device at that path is not, and exits 2. A symlink at that path is replaced, never followed. A missing parent directory is not created and exits 2. |
 | `--help` | everywhere | Show help and exit 0. |
 | `--version` | top level | Show the version (`dd-metric-bill 1.0.0`) and exit 0. A debug build also prints the git commit when git provides one. |
 
@@ -135,7 +135,7 @@ Besides exit 3 usage errors, an error for an unreadable file, a line that does n
 | 3 | Usage error. Stdout is empty. `--help` and `--version` that cannot be written also exit 3. |
 | 130 | SIGINT. No half-written report. An existing `--output` file is kept when the new report was not finished. Stderr is `interrupted by SIGINT`. |
 
-When stdout cannot take the report, stderr is `could not write the report: REASON` and the exit code is 2. With `--output PATH` the report goes to that file and stdout stays empty. An existing file is replaced. A missing parent directory is not created; stderr starts with `could not write the report to` and the exit code is 2. `--help` and `--version` that cannot be written exit 3, and stderr is `could not write the message: REASON`. A failed write does not panic.
+When stdout cannot take the report, stderr is `could not write the report: REASON` and the exit code is 2. With `--output PATH` the report goes to that file and stdout stays empty. An existing regular file is replaced; a directory, FIFO, socket or device is not (exit 2). A symlink at PATH is replaced, not followed, and a symlink planted on the temporary name is never written through. A missing parent directory is not created; stderr starts with `could not write the report to` and the exit code is 2. `--help` and `--version` that cannot be written exit 3, and stderr is `could not write the message: REASON`. A failed write does not panic.
 
 A sample and a price file must be regular files. The path is opened without waiting, and only that opened file is read. A symlink is followed. A directory, FIFO, device, or other non-regular path is not read, so a FIFO with no writer does not hang. The type comes from the opened file, so a path that becomes a FIFO does not make the read wait. The message is `cannot read sample: PATH: REASON` or `cannot read price file: PATH: REASON`, and `REASON` includes `not a regular file` when the path is not a regular file.
 

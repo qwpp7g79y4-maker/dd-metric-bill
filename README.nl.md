@@ -249,7 +249,7 @@ Elke optie van `dd-metric-bill --help`. Dezelfde lijst staat in de [referentie](
 | `--untyped-as` | count en diff, alleen met `--format prometheus` | Een Prometheus-metric zonder type telt als `gauge` of `count`. |
 | `--quiet` | count en diff | Verberg de `hint:`-regel, ook op een terminal. Geen contextregel. |
 | `--verbose` | count en diff | Print de `hint:`-regel ook bij een pipe, en bij succes één `context:`-regel op stderr. |
-| `--output` | count en diff | Schrijf het verslag naar dit bestand in plaats van stdout. Een bestaand bestand wordt overschreven. Een ontbrekende bovenliggende map wordt niet aangemaakt en eindigt met exitcode 2. |
+| `--output` | count en diff | Schrijf het verslag naar dit bestand in plaats van stdout. Een bestaand gewoon bestand wordt overschreven; een map, FIFO, socket of device op dat pad niet, en dat eindigt met exitcode 2. Een symlink op dat pad wordt vervangen, nooit gevolgd. Een ontbrekende bovenliggende map wordt niet aangemaakt en eindigt met exitcode 2. |
 | `--help` | overal | Toon hulp en exitcode 0. |
 | `--version` | bovenaan | Toon de versie (`dd-metric-bill 1.0.0`) en exitcode 0. Een debug-build toont ook de git-commit als git die geeft. |
 

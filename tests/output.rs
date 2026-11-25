@@ -118,3 +118,82 @@ fn output_flag_missing_directory_exits_two() {
     );
     fs::remove_dir_all(&root).ok();
 }
+
+#[cfg(unix)]
+#[test]
+fn output_flag_does_not_write_through_a_planted_symlink() {
+    let root = scratch();
+    let report = root.join("report.txt");
+    let victim = root.join("victim.txt");
+    fs::write(&victim, b"precious\n").unwrap();
+    // The temporary name holds the process id. `sh` knows it as `$$` and
+    // `exec` keeps it, so the link is planted on the exact name the run picks.
+    let script = format!(
+        "ln -s {victim} {root}/.report.txt.dd-metric-bill-$$.tmp; exec {bin} count --output {report} {sample}",
+        victim = victim.display(),
+        root = root.display(),
+        bin = env!("CARGO_BIN_EXE_dd-metric-bill"),
+        report = report.display(),
+        sample = sample(),
+    );
+    let out = Command::new("sh")
+        .args(["-c", &script])
+        .current_dir(env!("CARGO_MANIFEST_DIR"))
+        .output()
+        .expect("sh start");
+    assert_eq!(
+        out.status.code(),
+        Some(2),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(String::from_utf8_lossy(&out.stderr).contains("could not write the report"));
+    assert_eq!(fs::read(&victim).unwrap(), b"precious\n");
+    assert!(!report.exists());
+    fs::remove_dir_all(&root).ok();
+}
+
+#[cfg(unix)]
+#[test]
+fn output_flag_replaces_a_symlink_without_following_it() {
+    use std::os::unix::fs::symlink;
+    let root = scratch();
+    let target = root.join("target.txt");
+    let report = root.join("report.txt");
+    fs::write(&target, b"untouched\n").unwrap();
+    symlink(&target, &report).unwrap();
+    let (code, _, stderr) = run(&["count", "--output", report.to_str().unwrap(), &sample()]);
+    assert_eq!(code, Some(0), "{stderr}");
+    assert_eq!(fs::read(&target).unwrap(), b"untouched\n");
+    let meta = fs::symlink_metadata(&report).unwrap();
+    assert!(meta.file_type().is_file(), "the link is replaced by a file");
+    fs::remove_dir_all(&root).ok();
+}
+
+#[cfg(unix)]
+#[test]
+fn output_flag_does_not_replace_special_files() {
+    use std::os::unix::fs::FileTypeExt;
+    use std::os::unix::net::UnixListener;
+    let root = scratch();
+
+    let dir = root.join("a-directory");
+    fs::create_dir(&dir).unwrap();
+    let fifo = root.join("a-fifo");
+    let made = Command::new("mkfifo").arg(&fifo).status().expect("mkfifo");
+    assert!(made.success());
+    let sock = root.join("a-socket");
+    let _listener = UnixListener::bind(&sock).unwrap();
+
+    for path in [&dir, &fifo, &sock] {
+        let (code, stdout, stderr) = run(&["count", "--output", path.to_str().unwrap(), &sample()]);
+        assert_eq!(code, Some(2), "{path:?}: {stderr}");
+        assert!(stdout.is_empty());
+        assert!(stderr.contains("not a regular file"), "{stderr}");
+        assert!(!stderr.contains("panicked"), "{stderr}");
+    }
+    assert!(fs::symlink_metadata(&dir).unwrap().is_dir());
+    assert!(fs::symlink_metadata(&fifo).unwrap().file_type().is_fifo());
+    assert!(fs::symlink_metadata(&sock).unwrap().file_type().is_socket());
+    fs::remove_dir_all(&root).ok();
+}

@@ -249,7 +249,7 @@ Every option of `dd-metric-bill --help`. The same list is in the [reference](doc
 | `--untyped-as` | count and diff, only with `--format prometheus` | Count a Prometheus metric that has no type as `gauge` or `count`. |
 | `--quiet` | count and diff | Hide the hint line, even on a terminal. No context line. |
 | `--verbose` | count and diff | Print the hint line even on a pipe, and on success one `context:` line on stderr. |
-| `--output` | count and diff | Write the report to this file instead of stdout. An existing file is replaced. A missing parent directory is not created and exits 2. |
+| `--output` | count and diff | Write the report to this file instead of stdout. An existing regular file is replaced; a directory, FIFO, socket or device at that path is not, and exits 2. A symlink at that path is replaced, never followed. A missing parent directory is not created and exits 2. |
 | `--help` | everywhere | Show help and exit 0. |
 | `--version` | top level | Show the version (`dd-metric-bill 1.0.0`) and exit 0. A debug build also prints the git commit when git provides one. |
 

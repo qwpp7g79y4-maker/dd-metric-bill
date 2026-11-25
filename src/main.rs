@@ -139,7 +139,7 @@ struct Cli {
     verbose: bool,
 
     /// Write the report to this file instead of stdout.
-    /// An existing file is replaced. A missing parent directory is an error.
+    /// An existing regular file is replaced; other file types are not. A missing parent directory is an error.
     #[arg(long, global = true, value_name = "PATH")]
     output: Option<PathBuf>,
 }
@@ -345,13 +345,37 @@ fn write_report(path: Option<&Path>, text: &str) -> u8 {
             }
         };
     };
+    // A directory, FIFO, socket or device at PATH is never replaced. A symlink
+    // at PATH is replaced by the report; the rename does not follow it.
+    if let Ok(meta) = std::fs::symlink_metadata(path) {
+        let kind = meta.file_type();
+        if !kind.is_file() && !kind.is_symlink() {
+            note_hint(
+                format_args!(
+                    "could not write the report to {}: not a regular file",
+                    path.display()
+                ),
+                "--output replaces regular files only; pick another path",
+            );
+            return EXIT_INPUT;
+        }
+    }
     let tmp = temp_beside(path);
-    let created = File::create(&tmp).and_then(|mut file| {
+    // `create_new` fails when the name is taken and never follows a symlink
+    // placed there, so the report cannot be written through one.
+    let created = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&tmp);
+    let preexisting = matches!(&created, Err(err) if err.kind() == io::ErrorKind::AlreadyExists);
+    let created = created.and_then(|mut file: File| {
         file.write_all(text.as_bytes())?;
         file.flush()
     });
     if let Err(err) = created {
-        let _ = std::fs::remove_file(&tmp);
+        if !preexisting {
+            let _ = std::fs::remove_file(&tmp);
+        }
         if interrupt::interrupted() {
             return interrupt::EXIT_INTERRUPTED;
         }
