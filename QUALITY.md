@@ -14,7 +14,8 @@ This page shows how each release of dd-metric-bill was checked, what we found, a
 | Line coverage | not run |
 | `cargo fmt --check` | passed, exit 0 |
 | `cargo clippy --all-targets --locked -- -D warnings` | passed, exit 0 |
-| Fuzz targets, Rust 1.85, other platforms | not run |
+| Rust 1.85 (rustc 1.85.1), 2026-11-25, Linux | `cargo +1.85 fmt --check`: passed, exit 0. `cargo +1.85 clippy --all-targets --locked -- -D warnings`: passed, exit 0. `cargo +1.85 test --locked`: run with `--no-fail-fast`, exit 0: 310 passed, 0 failed, 0 ignored. Release build on 1.85: not run |
+| Fuzz targets, other platforms | not run |
 | CI on this commit | not run |
 | macOS | not run here. CI run 45696824433 on `023656c` failed only on macOS, in the test (socket path too long); `c834c07` fixes that and was not run on macOS |
 
@@ -53,7 +54,7 @@ Peak memory in the first run: 105112 KB. This is one machine and one input shape
 
 ### How we checked
 
-- `cargo test --locked` and `cargo test --release --locked` on `c834c07`: see the table at the top. Rust 1.85 was not run.
+- `cargo test --locked` and `cargo test --release --locked` on `c834c07`: see the table at the top. Rust 1.85 was run for fmt, clippy and the debug tests: see the table at the top.
 - `cargo clippy --all-targets --locked -- -D warnings` and `cargo fmt --check` on `c834c07`: both passed (exit 0).
 - `cargo +nightly fuzz build`: exit 0 on an earlier commit (`09d370a`); not re-run for this commit.
 - Each of the 7 fuzz targets ran 660 seconds on one pinned CPU core, sequentially (about 77 minutes in total):
