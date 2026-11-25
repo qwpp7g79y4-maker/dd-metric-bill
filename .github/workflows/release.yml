@@ -79,7 +79,7 @@ jobs:
         run: |
           name="dd-metric-bill-${GITHUB_REF_NAME}-${{ matrix.target }}"
           mkdir -p "dist/$name"
-          cp README.md README.nl.md LICENSE-MIT LICENSE-APACHE THIRD-PARTY-LICENSES.html CHANGELOG.md SECURITY.md QUALITY.md QUALITY.nl.md "dist/$name/"
+          cp README.md README.nl.md LICENSE-MIT LICENSE-APACHE THIRD-PARTY-LICENSES.html CHANGELOG.md SECURITY.md CONTRIBUTING.md QUALITY.md QUALITY.nl.md "dist/$name/"
           cp -R docs "dist/$name/"
           cp -R prices "dist/$name/"
           cp -R examples "dist/$name/"
