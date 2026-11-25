@@ -35,6 +35,14 @@ fn read(rel: &str) -> String {
     fs::read_to_string(&path).unwrap_or_else(|err| panic!("read {rel}: {err}"))
 }
 
+/// `.github/` is left out of the published crate (`exclude` in Cargo.toml), so
+/// the checks that read it only run in a repository checkout.
+fn has_github_dir() -> bool {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join(".github")
+        .is_dir()
+}
+
 /// The text under a level-2 heading, up to the next level-2 heading.
 fn section<'a>(text: &'a str, heading: &str) -> &'a str {
     let marker = format!("{heading}\n");
@@ -188,7 +196,9 @@ fn readme_has_the_sections() {
     assert!(section(&readme_nl, "## Contact").contains("[SECURITY.md](SECURITY.md)"));
     assert!(section(&readme, "## Support").contains("(https://ko-fi.com/pepai)"));
     assert!(section(&readme_nl, "## Steunen").contains("(https://ko-fi.com/pepai)"));
-    assert_eq!(read(".github/FUNDING.yml"), "ko_fi: pepai\n");
+    if has_github_dir() {
+        assert_eq!(read(".github/FUNDING.yml"), "ko_fi: pepai\n");
+    }
     let install = section(&readme, "## Installation");
     let install_nl = section(&readme_nl, "## Installatie");
     for (text, part) in [(&install, "EN"), (&install_nl, "NL")] {
@@ -217,7 +227,7 @@ fn readme_has_the_sections() {
     assert!(read("Cargo.toml").contains("rust-version = \"1.85\""));
     let requirements = section(&readme, "## System requirements");
     let requirements_nl = section(&readme_nl, "## Systeemvereisten");
-    let release = read(".github/workflows/release.yml");
+    let release = has_github_dir().then(|| read(".github/workflows/release.yml"));
     for target in [
         "x86_64-unknown-linux-gnu",
         "x86_64-unknown-linux-musl",
@@ -230,14 +240,21 @@ fn readme_has_the_sections() {
             requirements_nl.contains(target),
             "NL requirements miss {target}"
         );
-        assert!(
-            release.contains(&format!("target: {target}")),
-            "release.yml misses {target}"
-        );
+        if let Some(release) = &release {
+            assert!(
+                release.contains(&format!("target: {target}")),
+                "release.yml misses {target}"
+            );
+        }
     }
-    assert!(requirements.contains("glibc 2.34") && release.contains("GLIBC_2.34"));
-    assert!(requirements.contains("macOS 10.12") && release.contains("macos_min: \"10.12\""));
-    assert!(requirements.contains("macOS 11") && release.contains("macos_min: \"11.0\""));
+    assert!(requirements.contains("glibc 2.34"));
+    assert!(requirements.contains("macOS 10.12"));
+    assert!(requirements.contains("macOS 11"));
+    if let Some(release) = &release {
+        assert!(release.contains("GLIBC_2.34"));
+        assert!(release.contains("macos_min: \"10.12\""));
+        assert!(release.contains("macos_min: \"11.0\""));
+    }
     let security = read("SECURITY.md");
     assert!(security.contains("pep_ai@icloud.com"));
     assert!(security.contains("| 1.0.x | Yes |"));
@@ -441,6 +458,9 @@ fn option_and_error_tables_match_the_binary() {
 
 #[test]
 fn release_archive_ships_quickstart_fixtures() {
+    if !has_github_dir() {
+        return;
+    }
     let release = read(".github/workflows/release.yml");
     let readme = read(README);
     let quick = section(&readme, "## Quick start");
@@ -555,6 +575,9 @@ fn readme_and_reference_describe_one_host_per_line() {
 /// release archive. `prices/datadog-example.json` is copied with that directory.
 #[test]
 fn release_archive_ships_linked_paths() {
+    if !has_github_dir() {
+        return;
+    }
     let release = read(".github/workflows/release.yml");
     let (files, trees) = cp_sources(&release);
     let mut links = Vec::new();
