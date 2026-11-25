@@ -7,7 +7,7 @@ This page shows how each release of dd-metric-bill was checked, what we found, a
 | | |
 |---|---|
 | Version | 1.0.0, unreleased (release candidate) |
-| Commit checked | `b8bdc29`. Later commits change documentation only. |
+| Commit checked | `c834c07`. Later commits change documentation only. |
 | Date | 2026-11-25 |
 | Tests, debug | `cargo test --locked`: run with `--no-fail-fast`, exit 0: 310 passed, 0 failed, 0 ignored |
 | Tests, release | `cargo test --release --locked`: run with `--no-fail-fast`, exit 0: 310 passed, 0 failed, 0 ignored |
@@ -16,6 +16,7 @@ This page shows how each release of dd-metric-bill was checked, what we found, a
 | `cargo clippy --all-targets --locked -- -D warnings` | passed, exit 0 |
 | Fuzz targets, Rust 1.85, other platforms | not run |
 | CI on this commit | not run |
+| macOS | not run here. CI run 45696824433 on `023656c` failed only on macOS, in the test (socket path too long); `c834c07` fixes that and was not run on macOS |
 
 The counts come from the toolchain installed on 2026-11-25 (cargo 1.99.0, rustc 1.99.0), on Linux. The 100 MiB measurement below is older and was not repeated.
 
@@ -52,8 +53,8 @@ Peak memory in the first run: 105112 KB. This is one machine and one input shape
 
 ### How we checked
 
-- `cargo test --locked` and `cargo test --release --locked` on `b8bdc29`: see the table at the top. Rust 1.85 was not run.
-- `cargo clippy --all-targets --locked -- -D warnings` and `cargo fmt --check` on `b8bdc29`: both passed (exit 0).
+- `cargo test --locked` and `cargo test --release --locked` on `c834c07`: see the table at the top. Rust 1.85 was not run.
+- `cargo clippy --all-targets --locked -- -D warnings` and `cargo fmt --check` on `c834c07`: both passed (exit 0).
 - `cargo +nightly fuzz build`: exit 0 on an earlier commit (`09d370a`); not re-run for this commit.
 - Each of the 7 fuzz targets ran 660 seconds on one pinned CPU core, sequentially (about 77 minutes in total):
 
@@ -67,7 +68,7 @@ Peak memory in the first run: 105112 KB. This is one machine and one input shape
   | `parse_prices` | 661 | 15,151,042 | 0 |
   | `parse_prometheus` | 662 | 4,939,565 | 0 |
 
-- CI on `b8bdc29`: not run. The fuzz runs above were measured on earlier commits.
+- CI on `c834c07`: not run. The fuzz runs above were measured on earlier commits.
 
 ### Real bugs found
 

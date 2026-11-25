@@ -7,7 +7,7 @@ Deze pagina laat zien hoe elke release van dd-metric-bill is gecontroleerd, wat 
 | | |
 |---|---|
 | Versie | 1.0.0, unreleased (release candidate) |
-| Gecontroleerde commit | `b8bdc29`. Latere commits wijzigen alleen documentatie. |
+| Gecontroleerde commit | `c834c07`. Latere commits wijzigen alleen documentatie. |
 | Datum | 2026-11-25 |
 | Tests, debug | `cargo test --locked`: gedraaid met `--no-fail-fast`, exit 0: 310 geslaagd, 0 mislukt, 0 genegeerd |
 | Tests, release | `cargo test --release --locked`: gedraaid met `--no-fail-fast`, exit 0: 310 geslaagd, 0 mislukt, 0 genegeerd |
@@ -16,6 +16,7 @@ Deze pagina laat zien hoe elke release van dd-metric-bill is gecontroleerd, wat 
 | `cargo clippy --all-targets --locked -- -D warnings` | geslaagd, exit 0 |
 | Fuzz-targets, Rust 1.85, andere platforms | not run |
 | CI op deze commit | not run |
+| macOS | not run hier. CI-run 45696824433 op `023656c` faalde alleen op macOS, in de test (socketpad te lang); `c834c07` herstelt dat en is niet op macOS gedraaid |
 
 De aantallen komen van de toolchain die op 2026-11-25 is geïnstalleerd (cargo 1.99.0, rustc 1.99.0), op Linux.
 
@@ -41,8 +42,8 @@ De aantallen komen van de toolchain die op 2026-11-25 is geïnstalleerd (cargo 1
 
 ### Hoe we controleerden
 
-- `cargo test --locked` en `cargo test --release --locked` op `b8bdc29`: zie de tabel bovenaan. Rust 1.85 is niet gedraaid.
-- `cargo clippy --all-targets --locked -- -D warnings` en `cargo fmt --check` op `b8bdc29`: beide geslaagd (exit 0).
+- `cargo test --locked` en `cargo test --release --locked` op `c834c07`: zie de tabel bovenaan. Rust 1.85 is niet gedraaid.
+- `cargo clippy --all-targets --locked -- -D warnings` en `cargo fmt --check` op `c834c07`: beide geslaagd (exit 0).
 - `cargo +nightly fuzz build`: exit 0 op een eerdere commit (`09d370a`); niet opnieuw gedraaid voor deze commit.
 - Elk van de 7 fuzz-targets draaide 660 seconden op één vastgezette CPU-kern, achter elkaar (in totaal ongeveer 77 minuten):
 
@@ -56,7 +57,7 @@ De aantallen komen van de toolchain die op 2026-11-25 is geïnstalleerd (cargo 1
   | `parse_prices` | 661 | 15.151.042 | 0 |
   | `parse_prometheus` | 662 | 4.939.565 | 0 |
 
-- CI op `b8bdc29`: not run. De fuzz-runs hierboven zijn gemeten op eerdere commits.
+- CI op `c834c07`: not run. De fuzz-runs hierboven zijn gemeten op eerdere commits.
 
 ### Echte bugs gevonden
 
