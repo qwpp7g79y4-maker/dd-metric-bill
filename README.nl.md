@@ -259,6 +259,18 @@ Alleen count accepteert --explain, --plan, --hosts, --allow-tags, --prices en --
 
 `dd-metric-bill completions bash` en `dd-metric-bill completions zsh` printen een completionscript op stdout en eindigen met exit 0. Bijvoorbeeld `dd-metric-bill completions bash > ~/.local/share/bash-completion/completions/dd-metric-bill`. De andere opties worden geaccepteerd en genegeerd.
 
+## Afsluitcodes
+
+| Code | Betekenis |
+| --- | --- |
+| 0 | Het verslag is geprint. Met `--budget` is het totaal niet hoger dan N. `--help` en `--version` eindigen ook met 0. |
+| 1 | `--budget` overschreden. Het verslag wordt toch geprint, tenzij `--output` het naar een bestand schreef. |
+| 2 | Een sample of prijsbestand kan niet gelezen worden of is ongeldig, of het verslag kan niet geschreven worden. |
+| 3 | Gebruiksfout. Stdout is leeg. |
+| 130 | SIGINT. Geen half geschreven verslag. |
+
+De volledige lijst met meldingen staat in de [referentie](docs/reference.md).
+
 ## Hoe het rekent
 
 Een custom metric is één combinatie van metricnaam en tagwaarden, inclusief `host`. De pagina van Datadog zegt `Reordering tag values doesn't add uniqueness` (https://docs.datadoghq.com/account_management/billing/custom_metrics, gelezen 7 oktober 2026). COUNT, RATE en GAUGE zijn 1 per combinatie. Een histogram is standaard 5 per combinatie (4 aggregaties plus `95percentile`), een distribution is 5, of 10 met percentielen. `--allow-tags endpoint,status` op het count-sample hierboven is ingested 4 en indexed 3; op het distribution-sample is het ingested 20 en indexed 15. Eén regel met twee verschillende `host`-waarden wordt geweigerd; dezelfde waarde twee keer is één host. De volledige regels, de Prometheus-mapping en de allotment staan in de [referentie](docs/reference.nl.md).
@@ -290,6 +302,14 @@ dd-metric-bill past de regels van Datadog toe. De `host`-tag telt mee, een histo
 - Er is geen `--show-values`-vlag. De uitvoer toont tag-sleutels en aantallen, niet de tagwaarden.
 - Een prijs wordt exact decimaal uit het JSON-getal gelezen, niet als een binaire zwevendekommawaarde. Een prijs heeft hoogstens 12 cijfers achter de komma (`MAX_SCALE`) en een teller van hoogstens 10^18 (`MAX_NUMERATOR`). Nullen aan het eind van het decimale deel vallen weg vóór die grens. Een prijs daarbuiten maakt het prijsbestand ongeldig (exit 2, melding "field is too large").
 - Een JSON-sleutel die in hetzelfde object twee keer voorkomt wordt geweigerd (exit 2). Een JSONL-waarde zegt `invalid jsonl line N: duplicate key`. Een prijsbestand zegt `price file has a duplicate key`. De melding bevat de ruwe tekst niet. Een `\uXXXX`-escape die na decoderen dezelfde sleutel is telt mee. Dezelfde naam in een geneste waarde telt niet.
+
+## Prijzen en verantwoordelijkheid
+
+De tool kent zelf geen prijs. Een prijs komt alleen uit het JSON-bestand dat je met `--prices` meegeeft, en de tool haalt of controleert die nooit. `prices/datadog-example.json` is een voorbeeld in de goede vorm: USD 0,10 per 100 ingested, van de Datadog-pagina over custom metrics, gelezen 7 oktober 2026. Datadog kan prijzen wijzigen en jouw contract kan afwijken van de lijstprijs. Jij bent verantwoordelijk voor het prijsbestand dat je meegeeft. Het getoonde bedrag is een schatting uit één momentopname, geen factuur.
+
+## Onderhoud
+
+dd-metric-bill is een klein command-line-programma. De telregels en de bronnen waar ze vandaan komen staan in de [referentie](docs/reference.nl.md), met de datum waarop ze gelezen zijn (7 oktober 2026). Verandert Datadog een regel, dan merkt de tool dat niet; controleer de bron opnieuw voordat je op een getal vertrouwt. De minimaal ondersteunde Rust-versie is 1.85. Voordat een wijziging wordt aangenomen moeten `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` en `cargo test` slagen (zie [CONTRIBUTING.md](CONTRIBUTING.md)). Wat is gemeten, en op welke commit, staat in [QUALITY.nl.md](QUALITY.nl.md). Meld een bug als issue op GitHub en een beveiligingsprobleem zoals beschreven in [SECURITY.md](SECURITY.md).
 
 ## Steunen
 

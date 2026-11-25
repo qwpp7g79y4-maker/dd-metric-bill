@@ -259,6 +259,18 @@ Only count accepts --explain, --plan, --hosts, --allow-tags, --prices and --unbo
 
 `dd-metric-bill completions bash` and `dd-metric-bill completions zsh` print a completion script on standard output and exit 0. For example, `dd-metric-bill completions bash > ~/.local/share/bash-completion/completions/dd-metric-bill`. The other options are accepted and ignored.
 
+## Exit codes
+
+| Code | Meaning |
+| --- | --- |
+| 0 | The report was printed. With `--budget`, the total is not above N. `--help` and `--version` also exit 0. |
+| 1 | `--budget` exceeded. The report is still printed, unless `--output` wrote it to a file. |
+| 2 | A sample or price file cannot be read or is invalid, or the report cannot be written. |
+| 3 | Usage error. Stdout is empty. |
+| 130 | SIGINT. No half-written report. |
+
+The full list with messages is in the [reference](docs/reference.md).
+
 ## How it counts
 
 A custom metric is one combination of metric name and tag values, including `host`. Datadog's page says `Reordering tag values doesn't add uniqueness` (https://docs.datadoghq.com/account_management/billing/custom_metrics, read 7 October 2026). COUNT, RATE, and GAUGE are 1 per combination. A histogram is 5 per combination by default (4 aggregates plus `95percentile`), and a distribution is 5, or 10 with percentiles. `--allow-tags endpoint,status` on the count sample above is ingested 4 and indexed 3; on the distribution sample it is ingested 20 and indexed 15. One line with two different `host` values is rejected; the same value twice is one host. The full rules, the Prometheus mapping, and the allotment are in the [reference](docs/reference.md).
@@ -290,6 +302,14 @@ dd-metric-bill applies Datadog's rules. The `host` tag counts, a histogram or di
 - There is no `--show-values` flag. The output shows tag keys and counts, not the tag values.
 - A price is read as an exact decimal from the JSON number, not as a binary floating-point value. A price has at most 12 digits after the decimal point (`MAX_SCALE`) and a numerator of at most 10^18 (`MAX_NUMERATOR`). Trailing zeros in the fractional part are dropped before that limit. A price outside it makes the price file invalid (exit 2, message "field is too large").
 - A JSON key repeated in the same object is rejected (exit 2). A JSONL value says `invalid jsonl line N: duplicate key`. A price file says `price file has a duplicate key`. The message does not include the raw text. A `\uXXXX` escape that decodes to the same key counts. The same name inside a nested value does not.
+
+## Prices and responsibility
+
+The tool does not know any price. A price comes only from the JSON file you pass with `--prices`, and the tool never fetches or checks it. `prices/datadog-example.json` is an example in the right shape: USD 0.10 per 100 ingested, from the Datadog custom metrics page, read 7 October 2026. Datadog can change its prices, and your contract can differ from the list price. You are responsible for the price file you pass in. The cost shown is an estimate from one snapshot, not an invoice.
+
+## Maintenance
+
+dd-metric-bill is a small command-line tool. The counting rules and the sources they come from are written down in the [reference](docs/reference.md), with the date they were read (7 October 2026). If Datadog changes a rule, the tool does not notice; check the source again before you rely on a number. The minimum supported Rust version is 1.85. Before a change is accepted, `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` and `cargo test` must pass (see [CONTRIBUTING.md](CONTRIBUTING.md)). What was measured, and on which commit, is in [QUALITY.md](QUALITY.md). Report a bug as an issue on GitHub, and a security problem as described in [SECURITY.md](SECURITY.md).
 
 ## Support
 
