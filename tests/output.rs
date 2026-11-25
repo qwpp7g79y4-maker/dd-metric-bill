@@ -182,7 +182,12 @@ fn output_flag_does_not_replace_special_files() {
     let fifo = root.join("a-fifo");
     let made = Command::new("mkfifo").arg(&fifo).status().expect("mkfifo");
     assert!(made.success());
-    let sock = root.join("a-socket");
+    // macOS limits a socket path to about 104 bytes and its temp dir is long,
+    // so the socket lives in a short directory directly under /tmp.
+    let sock_dir = PathBuf::from(format!("/tmp/ddmb-{}", std::process::id()));
+    fs::create_dir_all(&sock_dir).unwrap();
+    let sock = sock_dir.join("s");
+    fs::remove_file(&sock).ok();
     let _listener = UnixListener::bind(&sock).unwrap();
 
     for path in [&dir, &fifo, &sock] {
@@ -195,5 +200,6 @@ fn output_flag_does_not_replace_special_files() {
     assert!(fs::symlink_metadata(&dir).unwrap().is_dir());
     assert!(fs::symlink_metadata(&fifo).unwrap().file_type().is_fifo());
     assert!(fs::symlink_metadata(&sock).unwrap().file_type().is_socket());
+    fs::remove_dir_all(&sock_dir).ok();
     fs::remove_dir_all(&root).ok();
 }
