@@ -14,7 +14,7 @@ This page shows how each release of dd-metric-bill was checked, what we found, a
 | Line coverage | not run |
 | `cargo fmt --check` | passed, exit 0 |
 | `cargo clippy --all-targets --locked -- -D warnings` | passed, exit 0 |
-| Rust 1.85 (rustc 1.85.1), 2026-11-25, Linux | `cargo +1.85 fmt --check`: passed, exit 0. `cargo +1.85 clippy --all-targets --locked -- -D warnings`: passed, exit 0. `cargo +1.85 test --locked`: run with `--no-fail-fast`, exit 0: 310 passed, 0 failed, 0 ignored. Release build on 1.85: not run |
+| Rust 1.85 (rustc 1.85.1), 2026-11-25, Linux | `cargo +1.85 fmt --check`: passed, exit 0. `cargo +1.85 clippy --all-targets --locked -- -D warnings`: passed, exit 0. `cargo +1.85 test --locked`: run with `--no-fail-fast`, exit 0: 310 passed, 0 failed, 0 ignored. `cargo +1.85 test --release --locked`: run with `--no-fail-fast`, exit 0: 310 passed, 0 failed, 0 ignored |
 | Fuzz targets, other platforms | not run |
 | CI on this commit | not run |
 | macOS | not run here. CI run 45696824433 on `023656c` failed only on macOS, in the test (socket path too long); `c834c07` fixes that and was not run on macOS |

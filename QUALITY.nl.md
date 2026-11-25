@@ -14,7 +14,7 @@ Deze pagina laat zien hoe elke release van dd-metric-bill is gecontroleerd, wat 
 | Regeldekking | not run |
 | `cargo fmt --check` | geslaagd, exit 0 |
 | `cargo clippy --all-targets --locked -- -D warnings` | geslaagd, exit 0 |
-| Rust 1.85 (rustc 1.85.1), 2026-11-25, Linux | `cargo +1.85 fmt --check`: geslaagd, exit 0. `cargo +1.85 clippy --all-targets --locked -- -D warnings`: geslaagd, exit 0. `cargo +1.85 test --locked`: gedraaid met `--no-fail-fast`, exit 0: 310 geslaagd, 0 mislukt, 0 genegeerd. Release-build op 1.85: not run |
+| Rust 1.85 (rustc 1.85.1), 2026-11-25, Linux | `cargo +1.85 fmt --check`: geslaagd, exit 0. `cargo +1.85 clippy --all-targets --locked -- -D warnings`: geslaagd, exit 0. `cargo +1.85 test --locked`: gedraaid met `--no-fail-fast`, exit 0: 310 geslaagd, 0 mislukt, 0 genegeerd. `cargo +1.85 test --release --locked`: gedraaid met `--no-fail-fast`, exit 0: 310 geslaagd, 0 mislukt, 0 genegeerd |
 | Fuzz-targets, andere platforms | not run |
 | CI op deze commit | not run |
 | macOS | not run hier. CI-run 45696824433 op `023656c` faalde alleen op macOS, in de test (socketpad te lang); `c834c07` herstelt dat en is niet op macOS gedraaid |
