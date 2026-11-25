@@ -7,13 +7,13 @@ Deze pagina laat zien hoe elke release van dd-metric-bill is gecontroleerd, wat 
 | | |
 |---|---|
 | Versie | 1.0.0, unreleased (release candidate) |
-| Gecontroleerde commit | `50c5c84`. Latere commits wijzigen alleen documentatie. |
+| Gecontroleerde commit | `b8bdc29`. Latere commits wijzigen alleen documentatie. |
 | Datum | 2026-11-25 |
-| Tests, debug | `cargo test --locked`: MISLUKT, exit 101. Het stopt bij de eerste testbinary die faalt. Met `--no-fail-fast`: 309 geslaagd, 1 mislukt, 0 genegeerd |
-| Tests, release | `cargo test --release --locked`: MISLUKT, exit 101. Met `--no-fail-fast`: 309 geslaagd, 1 mislukt, 0 genegeerd |
-| Falende test | `release_archive_ships_linked_paths` in `tests/readme.rs`: `release.yml does not ship CONTRIBUTING.md`. In deze regel niet opgelost |
+| Tests, debug | `cargo test --locked`: gedraaid met `--no-fail-fast`, exit 0: 310 geslaagd, 0 mislukt, 0 genegeerd |
+| Tests, release | `cargo test --release --locked`: gedraaid met `--no-fail-fast`, exit 0: 310 geslaagd, 0 mislukt, 0 genegeerd |
 | Regeldekking | not run |
-| `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` | not run |
+| `cargo fmt --check` | geslaagd, exit 0 |
+| `cargo clippy --all-targets --locked -- -D warnings` | geslaagd, exit 0 |
 | Fuzz-targets, Rust 1.85, andere platforms | not run |
 | CI op deze commit | not run |
 
@@ -41,8 +41,8 @@ De aantallen komen van de toolchain die op 2026-11-25 is geïnstalleerd (cargo 1
 
 ### Hoe we controleerden
 
-- `cargo test --locked` en `cargo test --release --locked` op `50c5c84`: zie de tabel bovenaan. Rust 1.85 is niet gedraaid.
-- `cargo clippy --all-targets -- -D warnings` en `cargo fmt --check`: niet gedraaid voor `50c5c84` (not run).
+- `cargo test --locked` en `cargo test --release --locked` op `b8bdc29`: zie de tabel bovenaan. Rust 1.85 is niet gedraaid.
+- `cargo clippy --all-targets --locked -- -D warnings` en `cargo fmt --check` op `b8bdc29`: beide geslaagd (exit 0).
 - `cargo +nightly fuzz build`: exit 0 op een eerdere commit (`09d370a`); niet opnieuw gedraaid voor deze commit.
 - Elk van de 7 fuzz-targets draaide 660 seconden op één vastgezette CPU-kern, achter elkaar (in totaal ongeveer 77 minuten):
 
@@ -56,7 +56,7 @@ De aantallen komen van de toolchain die op 2026-11-25 is geïnstalleerd (cargo 1
   | `parse_prices` | 661 | 15.151.042 | 0 |
   | `parse_prometheus` | 662 | 4.939.565 | 0 |
 
-- CI op `50c5c84`: not run. De fuzz-runs hierboven zijn gemeten op eerdere commits.
+- CI op `b8bdc29`: not run. De fuzz-runs hierboven zijn gemeten op eerdere commits.
 
 ### Echte bugs gevonden
 
