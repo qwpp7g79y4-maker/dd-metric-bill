@@ -175,7 +175,7 @@ None of this needs a Datadog API key: it only reads traffic or logs your own app
 
 Prices come only from a JSON file you pass with `--prices`; see [the price file format](docs/reference.md#price-file). Every text output ends with `estimate: Datadog bills the hourly average over the month; this is one snapshot (source: B1)`. All options, exit codes, and error messages are listed in the [reference](docs/reference.md) and in `dd-metric-bill --help`.
 
-## Aan de slag in 5 minuten
+## Quickstart in 5 minutes
 
 Five commands, offline, on the invented samples in `examples/` and `tests/fixtures/`. They need no network, no Datadog account and no TUI, and read no system logs. Run them from the root of a clone, with `dd-metric-bill` on your `PATH` (after `cargo install --locked --path .`, or use `target/release/dd-metric-bill`). A test runs the commands in this block literally.
 
