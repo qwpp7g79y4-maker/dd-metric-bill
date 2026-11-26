@@ -4,7 +4,7 @@
 
 Schat offline hoeveel factureerbare Datadog custom metrics een sample oplevert, voordat de rekening komt.
 
-[![crates.io](https://img.shields.io/crates/v/dd-metric-bill.svg)](https://crates.io/crates/dd-metric-bill) [![downloads](https://img.shields.io/crates/d/dd-metric-bill.svg)](https://crates.io/crates/dd-metric-bill) [![CI](https://github.com/qwpp7g79y4-maker/dd-metric-bill/actions/workflows/ci.yml/badge.svg)](https://github.com/qwpp7g79y4-maker/dd-metric-bill/actions/workflows/ci.yml) [![PEPAI gecontroleerd](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fqwpp7g79y4-maker%2Fdd-metric-bill%2Fmain%2F.github%2Fbadge.json)](QUALITY.nl.md) [![MSRV 1.85](https://img.shields.io/badge/MSRV-1.85-blue.svg)](https://github.com/qwpp7g79y4-maker/dd-metric-bill/blob/main/Cargo.toml) [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#licentie)
+[![crates.io](https://img.shields.io/crates/v/dd-metric-bill.svg)](https://crates.io/crates/dd-metric-bill) [![downloads](https://img.shields.io/crates/d/dd-metric-bill.svg)](https://crates.io/crates/dd-metric-bill) [![CI](https://github.com/qwpp7g79y4-maker/dd-metric-bill/actions/workflows/ci.yml/badge.svg)](https://github.com/qwpp7g79y4-maker/dd-metric-bill/actions/workflows/ci.yml) [![PEPAI checked](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fqwpp7g79y4-maker%2Fdd-metric-bill%2Fmain%2F.github%2Fbadge.json)](QUALITY.md) [![MSRV 1.85](https://img.shields.io/badge/MSRV-1.85-blue.svg)](https://github.com/qwpp7g79y4-maker/dd-metric-bill/blob/main/Cargo.toml) [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](https://github.com/qwpp7g79y4-maker/dd-metric-bill#license)
 
 [Installatie](#installatie) • [Snel aan de slag](#snel-aan-de-slag) • [Voorbeeld](#voorbeeld) • [Opties](#opties) • [Hoe het rekent](#hoe-het-rekent) • [Alternatieven](#vergelijking-met-alternatieven) • [Beperkingen](#beperkingen) • [Referentie](docs/reference.nl.md)
 
@@ -310,6 +310,8 @@ De tool kent zelf geen prijs. Een prijs komt alleen uit het JSON-bestand dat je 
 ## Onderhoud
 
 dd-metric-bill is een klein command-line-programma. De telregels en de bronnen waar ze vandaan komen staan in de [referentie](docs/reference.nl.md), met de datum waarop ze gelezen zijn (7 oktober 2026). Verandert Datadog een regel, dan merkt de tool dat niet; controleer de bron opnieuw voordat je op een getal vertrouwt. De minimaal ondersteunde Rust-versie is 1.85. Voordat een wijziging wordt aangenomen moeten `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` en `cargo test` slagen (zie [CONTRIBUTING.md](CONTRIBUTING.md)). Wat is gemeten, en op welke commit, staat in [QUALITY.nl.md](QUALITY.nl.md). Meld een bug als issue op GitHub en een beveiligingsprobleem zoals beschreven in [SECURITY.md](SECURITY.md).
+
+Na een release staat de tool in sluimermodus (dormant): een nieuwe versie komt er alleen bij een gemelde bug, een verzoek of een beveiligingsprobleem. Beveiliging gaat altijd voor.
 
 ## Steunen
 
