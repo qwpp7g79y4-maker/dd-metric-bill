@@ -175,7 +175,7 @@ None of this needs a Datadog API key: it only reads traffic or logs your own app
 
 Prices come only from a JSON file you pass with `--prices`; see [the price file format](docs/reference.md#price-file). Every text output ends with `estimate: Datadog bills the hourly average over the month; this is one snapshot (source: B1)`. All options, exit codes, and error messages are listed in the [reference](docs/reference.md) and in `dd-metric-bill --help`.
 
-## Aan de slag in 5 minuten
+## Quickstart in 5 minutes
 
 Five commands, offline, on the invented samples in `examples/` and `tests/fixtures/`. They need no network, no Datadog account and no TUI, and read no system logs. Run them from the root of a clone, with `dd-metric-bill` on your `PATH` (after `cargo install --locked --path .`, or use `target/release/dd-metric-bill`). A test runs the commands in this block literally.
 
@@ -310,6 +310,8 @@ The tool does not know any price. A price comes only from the JSON file you pass
 ## Maintenance
 
 dd-metric-bill is a small command-line tool. The counting rules and the sources they come from are written down in the [reference](docs/reference.md), with the date they were read (7 October 2026). If Datadog changes a rule, the tool does not notice; check the source again before you rely on a number. The minimum supported Rust version is 1.85. Before a change is accepted, `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` and `cargo test` must pass (see [CONTRIBUTING.md](CONTRIBUTING.md)). What was measured, and on which commit, is in [QUALITY.md](QUALITY.md). Report a bug as an issue on GitHub, and a security problem as described in [SECURITY.md](SECURITY.md).
+
+After a release the tool is dormant: a new version appears only for a reported bug, a request, or a security problem. Security always comes first.
 
 ## Support
 

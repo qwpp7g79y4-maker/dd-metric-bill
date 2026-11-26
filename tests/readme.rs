@@ -736,7 +736,12 @@ fn five_minute_section_commands_run_literally() {
     path.push(std::env::var_os("PATH").unwrap_or_default());
     for page in [README, README_NL] {
         let text = read(page);
-        let part = section(&text, "## Aan de slag in 5 minuten");
+        let heading = if page == README {
+            "## Quickstart in 5 minutes"
+        } else {
+            "## Aan de slag in 5 minuten"
+        };
+        let part = section(&text, heading);
         let block: Vec<&str> = part
             .split("```sh\n")
             .nth(1)

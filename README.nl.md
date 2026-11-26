@@ -311,6 +311,8 @@ De tool kent zelf geen prijs. Een prijs komt alleen uit het JSON-bestand dat je 
 
 dd-metric-bill is een klein command-line-programma. De telregels en de bronnen waar ze vandaan komen staan in de [referentie](docs/reference.nl.md), met de datum waarop ze gelezen zijn (7 oktober 2026). Verandert Datadog een regel, dan merkt de tool dat niet; controleer de bron opnieuw voordat je op een getal vertrouwt. De minimaal ondersteunde Rust-versie is 1.85. Voordat een wijziging wordt aangenomen moeten `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` en `cargo test` slagen (zie [CONTRIBUTING.md](CONTRIBUTING.md)). Wat is gemeten, en op welke commit, staat in [QUALITY.nl.md](QUALITY.nl.md). Meld een bug als issue op GitHub en een beveiligingsprobleem zoals beschreven in [SECURITY.md](SECURITY.md).
 
+Na een release staat de tool in sluimermodus (dormant): een nieuwe versie komt er alleen bij een gemelde bug, een verzoek of een beveiligingsprobleem. Beveiliging gaat altijd voor.
+
 ## Steunen
 
 dd-metric-bill is gratis te gebruiken. Bespaart het je geld, dan kun je het werk steunen via [Ko-fi](https://ko-fi.com/pepai).
